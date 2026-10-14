@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEC Montréal - Tableau de Bord M.Sc.</title>
+    <link rel="shortcut icon" href="icon.ico" type="image/x-icon">
+    <link rel="icon" href="icon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i data-lucide="graduation-cap"></i>
+                    <h2>HEC Studio</h2>
+                </div>
+                <div class="sidebar-controls">
+                    <button id="sidebar-pin-btn" class="icon-btn" type="button" title="Épingler la barre latérale">
+                        <i data-lucide="pin"></i>
+                    </button>
+                    <button id="sidebar-collapse-btn" class="icon-btn" type="button" title="Réduire la barre latérale">
+                        <i data-lucide="chevrons-left"></i>
+                    </button>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-target="section-dashboard"><i data-lucide="layout-dashboard"></i><span class="nav-text">Dashboard</span></a>
+                <a href="#" class="nav-item" data-target="section-courses"><i data-lucide="book-open"></i><span class="nav-text">Mes Cours</span></a>
+                <a href="#" class="nav-item" data-target="section-tree"><i data-lucide="network"></i><span class="nav-text">Arbre d'Études</span></a>
+                <a href="#" class="nav-item" data-target="section-planner"><i data-lucide="calendar-range"></i><span class="nav-text">Planificateur</span></a>
+                <a href="#" class="nav-item" data-target="section-project"><i data-lucide="folder-kanban"></i><span class="nav-text">Projet Supervisé</span></a>
+                <a href="#" class="nav-item" data-target="section-settings"><i data-lucide="settings"></i><span class="nav-text">Paramètres</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="avatar">
+                        <i data-lucide="user" class="avatar-fallback-icon"></i><img src="media/IMG_20260509_202847_770.webp" alt="" onerror="this.remove()">
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name">Étudiant·e</span>
+                        <span class="user-role">M.Sc. Intelligence d'affaires</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <div class="content-wrapper">
+            <!-- SECTION 1: DASHBOARD -->
+            <section id="section-dashboard" class="app-section active">
+                <header class="top-header">
+                    <div>
+                        <h1>Intelligence d'Affaires</h1>
+                        <p class="subtitle">Cheminement Projet supervisé · Structure 2026-2027 · 45 crédits</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showAddCourseModal()"><i data-lucide="plus"></i> Ajouter un cours au choix</button>
+                    </div>
+                </header>
+
+                <!-- Global Credits & Financial Stats Bar -->
+                <div class="financial-stats-bar glass-panel">
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(168, 85, 247, 0.12); color: #c084fc;">
+                            <i data-lucide="award"></i>
+                        </div>
+                        <div>
+                            <span>Crédits Terminés</span>
+                            <h4 id="db-fin-credits-done">0.0 <span style="font-size: 0.85rem; color: var(--text-secondary);">/ 45 cr</span></h4>
+                        </div>
+                    </div>
+
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(59, 130, 246, 0.12); color: #60a5fa;">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <div>
+                            <span>Crédits En Cours</span>
+                            <h4 id="db-fin-credits-progress">0.0 <span style="font-size: 0.85rem; color: var(--text-secondary);">cr</span></h4>
+                        </div>
+                    </div>
+
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(129, 140, 248, 0.12); color: #a5b4fc;">
+                            <i data-lucide="calendar-check"></i>
+                        </div>
+                        <div>
+                            <span>Crédits Planifiés</span>
+                            <h4 id="db-fin-credits-planned">0.0 <span style="font-size: 0.85rem; color: var(--text-secondary);">cr</span></h4>
+                        </div>
+                    </div>
+
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(16, 185, 129, 0.12); color: #34d399;">
+                            <i data-lucide="dollar-sign"></i>
+                        </div>
+                        <div>
+                            <span>Frais En Cours</span>
+                            <h4 style="color: #34d399;" id="db-fin-cost-current">0 $</h4>
+                        </div>
+                    </div>
+
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(245, 158, 11, 0.12); color: #fbbf24;">
+                            <i data-lucide="wallet"></i>
+                        </div>
+                        <div>
+                            <span>Reste à Payer (Futur)</span>
+                            <h4 style="color: #fbbf24;" id="db-fin-cost-remaining">37 800 $</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bento-grid">
+                    <!-- Progress Widget -->
+                    <div class="bento-card glass-panel col-span-2 row-span-2 progress-widget">
+                        <div class="card-header">
+                            <h3>Progression Globale</h3>
+                            <i data-lucide="trending-up" class="icon-accent"></i>
+                        </div>
+                        <div class="progress-content">
+                            <div class="progress-ring-container">
+                                <svg class="progress-ring" width="160" height="160">
+                                    <defs>
+                                        <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" stop-color="var(--accent-tertiary)" />
+                                            <stop offset="100%" stop-color="var(--accent-primary)" />
+                                        </linearGradient>
+                                    </defs>
+                                    <circle class="progress-ring-bg" stroke-width="12" fill="transparent" r="70" cx="80" cy="80"/>
+                                    <circle class="progress-ring-value" id="global-progress" stroke="url(#progressGrad)" stroke-width="12" fill="transparent" r="70" cx="80" cy="80"/>
+                                </svg>
+                                <div class="progress-text">
+                                    <span class="credits-count" id="total-credits">0</span>
+                                    <span class="credits-label">/ 45 cr.</span>
+                                </div>
+                            </div>
+                            <div class="progress-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Terminés</span>
+                                    <span class="stat-value" id="completed-courses">0 cours</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">En cours</span>
+                                    <span class="stat-value" id="current-courses">0 cours</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Planifiés</span>
+                                    <span class="stat-value" id="planned-courses">0 cours</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="credit-stack-wrap">
+                            <div class="credit-stack" role="img" aria-label="Répartition des crédits sur 45">
+                                <span class="stack-seg stack-done" id="stack-done" style="width:0%"></span>
+                                <span class="stack-seg stack-progress" id="stack-progress" style="width:0%"></span>
+                                <span class="stack-seg stack-planned" id="stack-planned" style="width:0%"></span>
+                            </div>
+                            <div class="credit-stack-legend">
+                                <span><i class="lg-dot lg-done"></i><span id="stack-legend-done">0 réussis</span></span>
+                                <span><i class="lg-dot lg-progress"></i><span id="stack-legend-progress">0 en cours</span></span>
+                                <span><i class="lg-dot lg-planned"></i><span id="stack-legend-planned">0 planifiés</span></span>
+                                <span><i class="lg-dot lg-remaining"></i><span id="stack-legend-remaining">45 restants</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GPA Target & Status -->
+                    <div class="bento-card glass-panel highlight-card">
+                        <div class="card-header">
+                            <h3>Moyenne Académique</h3>
+                            <i data-lucide="award" class="icon-purple"></i>
+                        </div>
+                        <div class="gpa-dashboard-content">
+                            <div class="gpa-metric">
+                                <span class="gpa-value" id="gpa-display">0.00</span>
+                                <span class="gpa-scale">/ 4.30</span>
+                            </div>
+                            <div class="gpa-progress">
+                                <span class="progress-percentage" id="gpa-target-text">Cible: 4.00</span>
+                                <div class="progress-bar-bg mt-1">
+                                    <div class="progress-bar-fill" style="width: 0%;" id="gpa-target-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Category Status -->
+                    <div class="bento-card glass-panel">
+                        <div class="card-header">
+                            <h3>Répartition des crédits</h3>
+                        </div>
+                        <ul class="status-list">
+                            <li>
+                                <div class="status-indicator dot-purple"></div>
+                                <span>Cours Obligatoire du Programme</span>
+                                <span class="status-fraction" id="frac-tronc">0/3 cr</span>
+                            </li>
+                            <li>
+                                <div class="status-indicator dot-blue"></div>
+                                <span>Cours Obligatoires de la Spécialisation</span>
+                                <span class="status-fraction" id="frac-noyau">0/15 cr</span>
+                            </li>
+                            <li>
+                                <div class="status-indicator dot-green"></div>
+                                <span>Cours à Option de la Spécialisation</span>
+                                <span class="status-fraction" id="frac-options">0/15 cr min.</span>
+                            </li>
+                            <li>
+                                <div class="status-indicator dot-slate"></div>
+                                <span>Cours au choix</span>
+                                <span class="status-fraction" id="frac-choix">0/3 cr max.</span>
+                            </li>
+                            <li>
+                                <div class="status-indicator dot-orange"></div>
+                                <span>Activités Obligatoires</span>
+                                <span class="status-fraction" id="frac-projet">0/9 cr</span>
+                            </li>
+                            <li>
+                                <div class="status-indicator dot-pink"></div>
+                                <span>Activités Recommandées</span>
+                                <span class="status-fraction" id="frac-recommandes">0/2 atel.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Quick Task board -->
+                    <div class="bento-card glass-panel col-span-2">
+                        <div class="card-header">
+                            <h3>Rappels & Tâches actives</h3>
+                            <i data-lucide="check-square" class="icon-accent"></i>
+                        </div>
+                        <div class="dashboard-tasks" id="dashboard-tasks-container">
+                            <!-- Tasks list -->
+                        </div>
+                    </div>
+
+                    <!-- Elective profiles tracking -->
+                    <div class="bento-card glass-panel col-span-2">
+                        <div class="card-header">
+                            <h3>Options par profil</h3>
+                            <i data-lucide="pie-chart" class="icon-purple"></i>
+                        </div>
+                        <div class="profiles-status-content">
+                            <div class="profile-bar-item">
+                                <span class="profile-label">📊 Marketing</span>
+                                <div class="progress-bar-bg"><div class="progress-bar-fill bg-cyan" style="width:0%" id="prof-mkt-bar"></div></div>
+                                <span class="profile-val" id="prof-mkt-text">0 cr</span>
+                            </div>
+                            <div class="profile-bar-item mt-2">
+                                <span class="profile-label">🧠 Sciences de la décision</span>
+                                <div class="progress-bar-bg"><div class="progress-bar-fill bg-indigo" style="width:0%" id="prof-scd-bar"></div></div>
+                                <span class="profile-val" id="prof-scd-text">0 cr</span>
+                            </div>
+                            <div class="profile-bar-item mt-2">
+                                <span class="profile-label">💻 Technologies de l'information</span>
+                                <div class="progress-bar-bg"><div class="progress-bar-fill bg-violet" style="width:0%" id="prof-ti-bar"></div></div>
+                                <span class="profile-val" id="prof-ti-text">0 cr</span>
+                            </div>
+                            <p class="text-secondary prof-note" id="prof-total-text">Les 15 cr minimum se répartissent librement entre les profils.</p>
+                        </div>
+                    </div>
+
+                    <!-- Validation du cheminement -->
+                    <div class="bento-card glass-panel col-span-4" id="validation-card">
+                        <div class="card-header">
+                            <h3>Validation du cheminement</h3>
+                            <i data-lucide="shield-check" class="icon-accent"></i>
+                        </div>
+                        <div id="validation-container"></div>
+                    </div>
+
+                    <!-- Quick Course Access -->
+                    <div class="bento-card glass-panel col-span-4">
+                        <div class="card-header">
+                            <h3>Aperçu : en cours et prochains cours</h3>
+                            <button class="btn btn-text" onclick="navigateToSection('section-courses')">Voir tous les cours <i data-lucide="arrow-right"></i></button>
+                        </div>
+                        <div class="course-list" id="dashboard-recent-courses">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: COURSES -->
+            <section id="section-courses" class="app-section">
+                <header class="top-header">
+                    <div>
+                        <h1>Plan de Cours & Notes</h1>
+                        <p class="subtitle">Sélectionnez, notez et évaluez vos cours à HEC Montréal</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="showAddCourseModal()"><i data-lucide="plus"></i> Ajouter un cours au choix</button>
+                    </div>
+                </header>
+
+                <div class="courses-layout glass-panel">
+                    <div class="filter-bar">
+                        <div class="search-box">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="course-search" placeholder="Rechercher un cours par code ou titre..." oninput="filterCourses()">
+                        </div>
+                        <div class="filter-tabs">
+                            <button class="tab-btn active" data-filter="all" onclick="setCourseFilter('all')">Tous</button>
+                            <button class="tab-btn" data-filter="tronc" onclick="setCourseFilter('tronc')">Obligatoire Programme</button>
+                            <button class="tab-btn" data-filter="noyau" onclick="setCourseFilter('noyau')">Obligatoire Spécialisation</button>
+                            <button class="tab-btn" data-filter="options" onclick="setCourseFilter('options')">Option de Spécialisation</button>
+                            <button class="tab-btn" data-filter="projet" onclick="setCourseFilter('projet')">Activités Obligatoires</button>
+                            <button class="tab-btn" data-filter="choix" onclick="setCourseFilter('choix')">Au choix</button>
+                            <button class="tab-btn" data-filter="recommandes" onclick="setCourseFilter('recommandes')">Activités Recommandées</button>
+                        </div>
+                    </div>
+
+                    <div class="courses-grid" id="courses-grid-container">
+                        <!-- Dynamic grid -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: STUDY TREE MAP & PREREQUISITES -->
+            <section id="section-tree" class="app-section">
+                <header class="top-header">
+                    <div>
+                        <h1>Arbre de Spécialisation & Prérequis</h1>
+                        <p class="subtitle">Visualisez les dépendances, débloquez les cours avancés et planifiez votre cheminement sans erreurs</p>
+                    </div>
+                </header>
+
+                <div class="tree-layout glass-panel">
+                    <!-- Tree Map Controls -->
+                    <div class="tree-legend">
+                        <div class="legend-item"><span class="legend-dot color-default"></span><span>Cours Inactif</span></div>
+                        <div class="legend-item"><span class="legend-dot color-selected"></span><span>Cours Sélectionné</span></div>
+                        <div class="legend-item"><span class="legend-dot color-prereq"></span><span>Préalable requis (Bloquant)</span></div>
+                        <div class="legend-item"><span class="legend-dot color-unlocks"></span><span>Cours Débloqué par celui-ci</span></div>
+                        <div class="legend-item"><span class="legend-dot legend-done"></span><span>Terminé</span></div>
+                        <div class="legend-item"><span class="legend-dot legend-progress"></span><span>En cours</span></div>
+                        <div class="legend-item"><span class="legend-dot legend-planned"></span><span>Planifié</span></div>
+                        <div class="legend-item"><span class="legend-line-or"></span><span>Lien en pointillés : « l'un OU l'autre »</span></div>
+                    </div>
+
+                    <!-- Tech Tree Visual representation -->
+                    <div class="tech-tree-container">
+                        <svg id="tree-connections-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0;"></svg>
+                        <div id="tree-dynamic"></div>
+
+                    </div>
+
+                    <!-- Selected details pane in tree map -->
+                    <div class="tree-sidebar glass-panel" id="tree-sidebar-container">
+                        <div class="placeholder-text-center">
+                            <i data-lucide="info" class="icon-accent" style="width:40px;height:40px;"></i>
+                            <p class="mt-2">Sélectionnez un cours dans le graphique pour visualiser ses dépendances, ses conditions préalables, et ses thèmes.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: PLANNER -->
+            <section id="section-planner" class="app-section">
+                <header class="top-header">
+                    <div>
+                        <h1>Planificateur de Sessions</h1>
+                        <p class="subtitle">Répartissez vos cours par trimestre en respectant préalables et offre. L'offre non confirmée par le document est signalée, jamais présumée.</p>
+                    </div>
+                </header>
+
+                <!-- Global Credits & Financial Stats Bar -->
+                <div class="financial-stats-bar glass-panel">
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(168, 85, 247, 0.12); color: #c084fc;">
+                            <i data-lucide="award"></i>
+                        </div>
+                        <div>
+                            <span>Crédits Terminés</span>
+                            <h4 id="pl-fin-credits-done">0.0 <span style="font-size: 0.85rem; color: var(--text-secondary);">/ 45 cr</span></h4>
+                        </div>
+                    </div>
+
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(59, 130, 246, 0.12); color: #60a5fa;">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <div>
+                            <span>Crédits En Cours</span>
+                            <h4 id="pl-fin-credits-progress">0.0 <span style="font-size: 0.85rem; color: var(--text-secondary);">cr</span></h4>
+                        </div>
+                    </div>
+
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(129, 140, 248, 0.12); color: #a5b4fc;">
+                            <i data-lucide="calendar-check"></i>
+                        </div>
+                        <div>
+                            <span>Crédits Planifiés</span>
+                            <h4 id="pl-fin-credits-planned">0.0 <span style="font-size: 0.85rem; color: var(--text-secondary);">cr</span></h4>
+                        </div>
+                    </div>
+
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(16, 185, 129, 0.12); color: #34d399;">
+                            <i data-lucide="dollar-sign"></i>
+                        </div>
+                        <div>
+                            <span>Frais En Cours</span>
+                            <h4 style="color: #34d399;" id="pl-fin-cost-current">0 $</h4>
+                        </div>
+                    </div>
+
+                    <div class="fin-stat-item">
+                        <div class="fin-icon-box" style="background: rgba(245, 158, 11, 0.12); color: #fbbf24;">
+                            <i data-lucide="wallet"></i>
+                        </div>
+                        <div>
+                            <span>Reste à Payer (Futur)</span>
+                            <h4 style="color: #fbbf24;" id="pl-fin-cost-remaining">37 800 $</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="planner-alerts glass-panel" id="planner-alerts" style="display:none;"></div>
+
+                <div class="planner-layout-split">
+                    <!-- Left Side: Pools of unscheduled courses -->
+                    <aside class="planner-pool glass-panel">
+                        <div class="pool-header">
+                            <h3><i data-lucide="folder-plus" class="icon-accent"></i> Cours à planifier</h3>
+                            <p class="pool-subtitle">Filtrez et glissez vos cours restants vers un trimestre, ou utilisez le bouton d'assignation rapide.</p>
+                        </div>
+                        <div class="pool-filters">
+                            <button class="pool-filter-btn active" id="pool-filter-all" onclick="setPoolFilter('all')">Tous</button>
+                            <button class="pool-filter-btn" id="pool-filter-mandatory" onclick="setPoolFilter('mandatory')">Obligatoires</button>
+                            <button class="pool-filter-btn" id="pool-filter-options" onclick="setPoolFilter('options')">Options</button>
+                        </div>
+                        <div class="pool-profile-bar" id="pool-profile-bar" role="group" aria-label="Filtrer par profil"></div>
+                        <div class="pool-search-row">
+                            <div class="pool-search"><i data-lucide="search"></i><input type="search" id="pool-search" placeholder="Code ou titre…" oninput="setPoolSearch(this.value)" autocomplete="off"></div>
+                            <button class="pool-toggle active" id="pool-done-toggle" onclick="togglePoolShowDone()" aria-pressed="true" title="Afficher ou masquer les cours déjà réussis sans trimestre">Réussis</button>
+                            <button class="pool-reset" id="pool-reset" onclick="resetPoolFilters()" style="display:none;"><i data-lucide="x"></i> Réinitialiser</button>
+                        </div>
+                        <div class="pool-count" id="pool-count" aria-live="polite"></div>
+                        <div class="pool-list" id="unplanned-courses-pool" ondragover="allowDrop(event)" ondrop="dropToPool(event)">
+                            <!-- Dynamic unplanned courses will be injected here -->
+                        </div>
+                    </aside>
+
+                    <!-- Right Side: Semester Kanban Columns -->
+                    <div class="planner-board-wrapper glass-panel">
+                        <div class="planner-board" id="planner-board-container">
+                            <!-- Semesters columns will be dynamically injected here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 5: PROJECT -->
+            <section id="section-project" class="app-section">
+                <header class="top-header">
+                    <div>
+                        <h1>Projet Supervisé (9 cr)</h1>
+                        <p class="subtitle">Suivez et planifiez précisément le calendrier de vos 6 mois de projet de recherche ou d'intervention</p>
+                    </div>
+                </header>
+
+                <div class="project-layout bento-grid">
+                    <!-- Project Config -->
+                    <div class="bento-card glass-panel col-span-2">
+                        <div class="card-header">
+                            <h3>Calendrier du Projet</h3>
+                            <i data-lucide="calendar" class="icon-accent"></i>
+                        </div>
+                        <div class="project-config-content">
+                            <div class="input-field">
+                                <label>Date de début du projet</label>
+                                <input type="date" id="project-start-date" onchange="calculateProjectTimeline()">
+                            </div>
+                            <p class="text-secondary mt-3">Renseignez votre date officielle de début de projet supervisé pour générer un calendrier dynamique adapté aux 6 mois autorisés par HEC Montréal.</p>
+                        </div>
+                    </div>
+
+                    <!-- Gantt Timeline widget -->
+                    <div class="bento-card glass-panel col-span-2 row-span-2">
+                        <div class="card-header">
+                            <h3>Chronologie du Projet</h3>
+                        </div>
+                        <div class="gantt-timeline" id="project-gantt-timeline">
+                            <!-- Visual phases -->
+                        </div>
+                    </div>
+
+                    <!-- Requirements Widget -->
+                    <div class="bento-card glass-panel col-span-2">
+                        <div class="card-header">
+                            <h3>Livrables & Activités obligatoires</h3>
+                        </div>
+                        <ul class="checklist-items">
+                            <li>
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="chk-ethi" onchange="toggleProjectMilestone('ethi')">
+                                    <span class="checkmark"></span>
+                                    <span>Réussir la formation ETHI 66200 (Conduite responsable)</span>
+                                </label>
+                            </li>
+                            <li>
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="chk-sujet" onchange="toggleProjectMilestone('sujet')">
+                                    <span class="checkmark"></span>
+                                    <span>Soumettre et faire approuver le sujet (avant 36 cr)</span>
+                                </label>
+                            </li>
+                            <li>
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="chk-redac" onchange="toggleProjectMilestone('redac')">
+                                    <span class="checkmark"></span>
+                                    <span>Rédiger le rapport de projet (Max 6 mois)</span>
+                                </label>
+                            </li>
+                            <li>
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="chk-sout" onchange="toggleProjectMilestone('sout')">
+                                    <span class="checkmark"></span>
+                                    <span>Dépôt final & évaluation du comité</span>
+                                </label>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: SETTINGS -->
+            <section id="section-settings" class="app-section">
+                <header class="top-header">
+                    <div>
+                        <h1>Paramètres généraux</h1>
+                        <p class="subtitle">Gérez vos préférences de session</p>
+                    </div>
+                </header>
+
+                <div class="settings-layout glass-panel">
+                    <div class="settings-group">
+                        <h3>Objectifs personnels</h3>
+                        <div class="input-grid">
+                            <div class="input-field">
+                                <label>Moyenne cible (GPA)</label>
+                                <input type="number" id="target-gpa" min="0" max="4.30" step="0.05" value="4.00" onchange="renderAll()">
+                            </div>
+                            <div class="input-field">
+                                <label>Année d'obtention du diplôme</label>
+                                <input type="number" id="target-year" min="2026" max="2035" value="2027">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group mt-4">
+                        <h3>Sauvegarde & Synchronisation</h3>
+                        <p class="text-secondary mb-3">Exportez vos choix de cours (statuts, notes, semestres) vers un fichier JSON pour les importer dans un autre appareil, navigateur, ou l'application .exe. Vos données sont ainsi portables entre tous les environnements.</p>
+                        <div class="settings-buttons sync-buttons">
+                            <button class="btn btn-primary" id="btn-export-data" onclick="exportData()">
+                                <i data-lucide="download"></i> Exporter mes données
+                            </button>
+                            <label class="btn btn-outline" id="btn-import-label" for="import-file-input" style="cursor:pointer;">
+                                <i data-lucide="upload"></i> Importer des données
+                            </label>
+                            <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="importData(event)">
+                        </div>
+                        <div id="import-feedback" class="import-feedback" style="display:none;"></div>
+                    </div>
+
+                    <div class="settings-group mt-4">
+                        <h3>À propos et confidentialité</h3>
+                        <p class="text-secondary mb-3"><strong>Version <span id="app-version"></span></strong> — outil d'étude <strong>non officiel</strong>, non affilié à HEC Montréal. Il applique la structure 2026-2027 du <strong>M. Sc. Intelligence d'affaires, cheminement Projet supervisé</strong> (pas le cheminement avec mémoire). Les cours, crédits, préalables et périodes d'offre viennent des pages publiques de HEC et peuvent changer : confirmez toujours votre cheminement auprès de HEC. Le résultat de la validation n'est pas une garantie d'obtention du diplôme.</p>
+                        <p class="text-secondary mb-3"><strong>Vos données restent dans ce navigateur</strong> (stockage local) : rien n'est envoyé sur Internet, et personne d'autre ne les voit. Elles sont propres à cet appareil et à ce navigateur, et disparaissent si vous videz les données du site : utilisez régulièrement <em>Exporter mes données</em> ci-dessous pour en garder une copie.</p>
+                    </div>
+
+                    <div class="settings-group mt-4">
+                        <h3>Cours archivés (hors programme)</h3>
+                        <p class="text-secondary mb-3">Ces cours ne font pas partie de la structure officielle du M. Sc. Intelligence d'affaires : ils sont retirés du catalogue actif, mais leurs données personnelles sont conservées ici. Vous pouvez en reclasser un comme <strong>cours au choix</strong> (max. 3 crédits) ou le supprimer définitivement.</p>
+                        <div id="archive-container"></div>
+                        <div id="pre-migration-backup-row" style="display:none; margin-top:0.75rem;">
+                            <button class="btn btn-outline" onclick="downloadPreMigrationBackup()"><i data-lucide="download"></i> Télécharger la copie de sécurité d'avant la correction</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-group mt-4">
+                        <h3>Données de l'application</h3>
+                        <p class="text-secondary mb-3">Toutes vos modifications sont stockées localement dans votre session sécurisée.</p>
+                        <div class="settings-buttons">
+                            <button class="btn btn-outline" onclick="resetToDefault()"><i data-lucide="rotate-ccw"></i> Réinitialiser les données</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- MODAL 1: COURSE DETAILS DRAWER -->
+    <div id="course-details-drawer" class="drawer-overlay" onclick="closeDrawer(event)">
+        <div class="drawer glass-panel" onclick="event.stopPropagation()">
+            <div class="drawer-header">
+                <span class="drawer-course-code" id="drawer-code">CODE 0000</span>
+                <button class="btn-close" onclick="closeDrawer()"><i data-lucide="x"></i></button>
+            </div>
+            <div class="drawer-body">
+                <h2 id="drawer-title" class="drawer-title">Titre du cours</h2>
+                <p id="drawer-namefr" class="text-secondary drawer-namefr" style="display:none;"></p>
+                <div class="drawer-meta">
+                    <span class="meta-tag"><i data-lucide="award"></i> <span id="drawer-credits">3.00</span> crédits</span>
+                    <span class="meta-tag"><i data-lucide="calendar"></i> <span id="drawer-period">Trimestre</span></span>
+                    <span class="meta-tag"><i data-lucide="tag"></i> <span id="drawer-category">Catégorie</span></span>
+                    <span class="meta-tag"><i data-lucide="map-pin"></i> <span id="drawer-mode">Mode</span></span>
+                </div>
+
+                <!-- Status & Grade Panel -->
+                <div class="drawer-status-editor">
+                    <h3>Statut & Note :</h3>
+                    <div class="status-btn-group">
+                        <button class="status-btn btn-todo" onclick="updateCurrentCourseStatus('todo')">À faire</button>
+                        <button class="status-btn btn-progress" onclick="updateCurrentCourseStatus('progress')">En cours</button>
+                        <button class="status-btn btn-done" onclick="updateCurrentCourseStatus('done')">Terminé</button>
+                    </div>
+                    
+                    <p class="drawer-effective" id="drawer-effective-status"></p>
+                    <div class="grade-editor-field mt-3" id="grade-editor-container" style="display:none;">
+                        <label>Note finale obtenue :</label>
+                        <select id="drawer-grade-selector" onchange="updateCurrentCourseGrade(this.value)">
+                            <option value="">-- Non spécifiée --</option>
+                            <option value="A+">A+ (4.30)</option>
+                            <option value="A">A (4.00)</option>
+                            <option value="A-">A- (3.70)</option>
+                            <option value="B+">B+ (3.30)</option>
+                            <option value="B">B (3.00)</option>
+                            <option value="B-">B- (2.70)</option>
+                            <option value="C+">C+ (2.30)</option>
+                            <option value="C">C (2.00)</option>
+                            <option value="F">F (0.00)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Session Planner inside course -->
+                <div class="drawer-planner-editor">
+                    <label>Planifié pour le trimestre :</label>
+                    <select id="drawer-semester-selector" onchange="updateCurrentCourseSemester(this.value)">
+                        <option value="">Non planifié</option>
+                        <option value="A26">Automne 2026</option>
+                        <option value="H27">Hiver 2027</option>
+                        <option value="E27">Été 2027</option>
+                        <option value="A27">Automne 2027</option>
+                        <option value="H28">Hiver 2028</option>
+                        <option value="E28">Été 2028</option>
+                    </select>
+                </div>
+
+                <!-- Study Notes / Tasks -->
+                <div class="drawer-content-section">
+                    <h3>Mes Notes de cours & Tâches</h3>
+                    <textarea id="drawer-notes" rows="4" placeholder="Ex: Devoir à remettre pour le 15 mars. Se concentrer sur les réseaux de neurones..." oninput="updateCurrentCourseNotes(this.value)"></textarea>
+                </div>
+
+                <div class="drawer-content-section">
+                    <h3>Conditions & admissibilité</h3>
+                    <ul id="drawer-conditions" class="conditions-list"></ul>
+                    <p id="drawer-unverified" class="unverified-note" style="display:none;"></p>
+                </div>
+
+                <div class="drawer-content-section">
+                    <h3>Description</h3>
+                    <p id="drawer-desc" class="text-secondary">Description complète...</p>
+                </div>
+
+                <div class="drawer-content-section" id="drawer-themes-section">
+                    <h3>Thèmes couverts</h3>
+                    <ul id="drawer-themes" class="themes-list">
+                        <!-- themes list -->
+                    </ul>
+                </div>
+
+                <div class="drawer-content-section" id="drawer-remarques-section">
+                    <h3>Remarques importantes</h3>
+                    <p id="drawer-remarques" class="text-secondary italic">Remarques...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: ADD CUSTOM COURSE -->
+    <div id="add-course-modal" class="modal-overlay" onclick="closeAddCourseModal(event)">
+        <div class="modal glass-panel" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>Ajouter un cours au choix</h3>
+                <button class="btn-close" onclick="closeAddCourseModal()"><i data-lucide="x"></i></button>
+            </div>
+            <form id="add-course-form" onsubmit="handleCustomCourseSubmit(event)">
+                <div class="modal-body">
+                    <p class="text-secondary" style="font-size:0.8rem;margin:0 0 0.5rem;">Les catégories du programme sont fermées par le document officiel : seul un <strong>cours au choix</strong> (maximum 3 crédits : 2e cycle ou campus international à HEC Montréal, ou autre université avec l'approbation préalable du responsable de spécialisation) peut être ajouté.</p>
+                    <div class="input-field">
+                        <label>Code du cours</label>
+                        <input type="text" id="add-code" placeholder="Ex: MATH 60607" required pattern="^[A-Za-z]{4}\s?\d{5}$">
+                    </div>
+                    <div class="input-field">
+                        <label>Nom du cours</label>
+                        <input type="text" id="add-name" placeholder="Intitulé du cours" required>
+                    </div>
+                    <div class="input-field">
+                        <label>Catégorie</label>
+                        <select id="add-category" disabled>
+                            <option value="choix">Cours au choix (max. 3 cr)</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
+                        <label>Crédits</label>
+                        <input type="number" id="add-credits" value="3.0" min="0.5" max="3" step="0.5">
+                    </div>
+                    <div class="input-field">
+                        <label>Trimestre d'offre</label>
+                        <input type="text" id="add-period" placeholder="Ex: Automne, Hiver">
+                    </div>
+                    <div class="input-field">
+                        <label>Description (optionnel)</label>
+                        <textarea id="add-desc" rows="3" placeholder="Description du cours..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="closeAddCourseModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+# Ne jamais publier de données personnelles
+*.json
+*.xlsx
+media/
+Program info & Savings/
+.venv/
+__pycache__/
+build/
+dist/
+.claude/
