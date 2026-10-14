@@ -3436,9 +3436,7 @@ function renderPlannerAdvice() {
             <i data-lucide="${open ? "chevron-up" : "chevron-down"}"></i>
         </button>
         <div id="advice-body" class="advice-body"${open ? "" : " hidden"}>
-            <p class="advice-source">Conseils de <strong>Léo Belzile</strong>, professeur — source :
-                <a href="${ADVICE_SOURCE_URL}" target="_blank" rel="noopener noreferrer">lbelzile.bitbucket.io/ia.html#cours-obligatoires</a>.
-                <em>Avis d'un professeur, pas des règles officielles de HEC.</em></p>
+            <p class="advice-source">Conseils du professeur <strong>Léo Belzile</strong> : <a href="${ADVICE_SOURCE_URL}" target="_blank" rel="noopener noreferrer">lbelzile.bitbucket.io/ia.html#cours-obligatoires</a>.</p>
             <div class="advice-cols">
                 <div>
                     <h4>L'essentiel</h4>
