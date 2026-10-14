@@ -1,1 +1,1 @@
-1.2 — 14 octobre 2026 (version figée : ne plus modifier ce dossier ; le travail continue en v2). Ajoute : liste de cours du planificateur compacte avec filtres toujours visibles, chronologie du projet en diagramme de Gantt, conseils de Léo Belzile repliés par défaut.
+1.3 — 14 octobre 2026 (version figée : ne plus modifier ce dossier ; le travail continue en v2). Ajoute : rappel de sauvegarde (Exporter / Importer) après modification, barre de crédits compacte, trimestres sans défilement horizontal, textes sans mentions d'offre non confirmée.

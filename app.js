@@ -23,7 +23,7 @@ const COST_PER_CREDIT = 840;
 
 const SCHEMA_VERSION = 2;
 // Version de l'application (affichée dans Paramètres → À propos)
-const APP_VERSION = "1.2";
+const APP_VERSION = "1.3";
 const APP_VERSION_DATE = "14 octobre 2026";
 
 // Isolation du stockage local. Sur un site hébergé (ex. GitHub Pages : utilisateur.github.io/depot/), TOUS les dépôts
@@ -78,7 +78,7 @@ const OUT_OF_PROGRAM_CODES = [];
 // Le document officiel indique « MATH 70611 (Réf. MATH 70111) ».
 const CODE_ALIASES = { "MATH 70111": "MATH 70611" };
 
-const NOT_IN_DOC = "Non précisé dans le document officiel";
+const NOT_IN_DOC = "Non précisé";
 
 const DEFAULT_COURSES = [
     // ── 1. Cours obligatoire du programme (3 cr) ─────────────────────────────
@@ -570,7 +570,7 @@ const DEFAULT_COURSES = [
         desc: "Prise en charge d'un mandat spécifique avec livrables clairs, permettant de résoudre de façon rigoureuse un problème de recherche ou issu d'un milieu pratique en mobilisant une démarche scientifique. Contextes de réalisation : mandat d'intervention en organisation (diagnostic, planification/implantation de pratiques de gestion, conception d'outils/modèles décisionnels, analyse de performance, recommandations) ou mandat à l'université (étude de cas ou projet spécifique de recherche).",
         themes: [],
         remarques: "Durée maximale de 6 mois (rédaction incluse). Préalable obligatoire : ETHI 66200(A) (ou en concomitance). Le sujet doit être soumis avant d'avoir cumulé 36 crédits de cours.",
-        userRule: "Information fournie par l'étudiant (12 oct. 2026) : le projet peut être réalisé à n'importe quelle session, à condition d'avoir terminé 12 crédits de cours. Le document officiel indique « - » comme période d'offre et ne mentionne pas ce seuil : à confirmer auprès de HEC.",
+        userRule: "Information fournie par l'étudiant (12 oct. 2026) : le projet peut être réalisé à n'importe quelle session, à condition d'avoir terminé 12 crédits de cours.",
         creditPrereq: 12,
         status: "todo", grade: "", semester: "", notes: "",
         prerequisites: ["ETHI 66200"], prerequisiteRelation: "AND", coreqAllowed: true,
@@ -740,7 +740,7 @@ function hasCreditPrereq(course) { return !!course.creditPrereq; }
 function describePrerequisites(course) {
     const prereqs = course.prerequisites || [];
     const credit = course.creditPrereq ? `${course.creditPrereq} crédits de cours terminés` : "";
-    if (prereqs.length === 0) return credit ? `${credit} (information de l'étudiant)` : "Aucun préalable de cours dans le document officiel";
+    if (prereqs.length === 0) return credit ? `${credit} (information de l'étudiant)` : "Aucun préalable de cours";
     const joiner = prereqRelation(course) === "OR" ? " ou " : " et ";
     let txt = prereqs.join(joiner) + (prereqRelation(course) === "OR" ? " (un seul suffit)" : "");
     if (course.coreqAllowed) txt += " — peut être suivi en concomitance";
@@ -1131,12 +1131,16 @@ function importData(event) {
 }
 
 function showImportFeedback(message, type) {
+    if (type === "success" && typeof backupMarkSaved === "function") backupMarkSaved();
     const el = document.getElementById("import-feedback");
-    if (!el) return;
-    el.textContent = message;
-    el.className = "import-feedback " + (type === "success" ? "import-ok" : "import-err");
-    el.style.display = "block";
-    setTimeout(() => { el.style.display = "none"; }, 8000);
+    if (el && el.offsetParent !== null) {
+        el.textContent = message;
+        el.className = "import-feedback " + (type === "success" ? "import-ok" : "import-err");
+        el.style.display = "block";
+        setTimeout(() => { el.style.display = "none"; }, 8000);
+    } else if (typeof showNotification === "function") {
+        showNotification(message, type === "success" ? "success" : "error");   // hors de la section Paramètres (ex. rappel de sauvegarde)
+    }
 }
 
 // Reset all data to factory defaults (une sauvegarde JSON est téléchargée avant l'effacement)
@@ -1198,14 +1202,14 @@ function restoreArchivedAsChoice(code) {
     if (findCourse(code)) { showNotification("Un cours avec ce code existe déjà.", "error"); return; }
     courses.push(normalizeCustomCourse({
         code: a.code, name: a.name, category: "choix", credits: a.credits, period: "", mode: NOT_IN_DOC,
-        desc: "Cours au choix (reclassé depuis les cours archivés). Admissibilité à confirmer : cours de 2e cycle ou campus international à HEC Montréal, ou autre université avec approbation préalable du responsable de spécialisation.",
-        remarques: "Admissibilité comme cours au choix à valider auprès de HEC.",
+        desc: "Cours au choix (reclassé depuis les cours archivés). Cours de 2e cycle ou campus international à HEC Montréal, ou autre université avec approbation préalable du responsable de spécialisation.",
+        remarques: "",
         status: a.status, grade: a.grade, semester: a.semester, notes: a.notes
     }));
     archivedCourses = archivedCourses.filter(x => x.code !== code);
     recomputeUnlocks();
     renderAll();
-    showNotification(`<strong>${escapeHtml(code)}</strong> reclassé comme cours au choix. Vérifiez son admissibilité auprès de HEC.`);
+    showNotification(`<strong>${escapeHtml(code)}</strong> reclassé comme cours au choix.`);
 }
 
 function deleteArchived(code) {
@@ -1670,7 +1674,6 @@ function getCourseIssues(c) {
 
     const offer = getOffer(c, c.semester);
     if (offer === "no") issues.push({ level: "error", kind: "offer", text: `${c.code} n'est pas offert en ${termLabel(c.semester)} (offre indiquée : ${c.period}).` });
-    else if (offer === "maybe") issues.push({ level: "warn", kind: "maybe", text: `${c.code} en ${termLabel(c.semester)} : offre non confirmée (« ${c.period || "non précisée"} ») — à vérifier auprès de HEC.` });
 
     const ev = evaluatePrerequisites(c, "plan", idx);
     if (ev.level === "blocked") {
@@ -1702,12 +1705,6 @@ function validatePlan() {
 
     // 2. Problèmes cours par cours (préalables, offre, exclusions)
     courses.forEach(c => getCourseIssues(c).forEach(i => issues.push(i)));
-    const maybes = issues.filter(i => i.kind === "maybe");
-    if (maybes.length > 1) {
-        // regroupe les avertissements « offre non confirmée »
-        for (let k = issues.length - 1; k >= 0; k--) if (issues[k].kind === "maybe") issues.splice(k, 1);
-        push("warn", `Offre non confirmée (période « au moins une fois… » ou non précisée) pour : ${maybes.map(m => m.text.split(" ")[0] + " " + m.text.split(" ")[1]).join(", ")} — à vérifier auprès de HEC avant l'inscription.`, "maybe");
-    }
 
     // 3. Cohérence des cours déjà réussis
     courses.forEach(c => {
@@ -1733,7 +1730,6 @@ function validatePlan() {
     const choixTotal = courses.filter(c => c.category === "choix").reduce((s, c) => s + c.credits, 0);
     if (choixTotal > R.choixMax) push("error", `Cours au choix : ${fmtCr(choixTotal)} cr déclarés alors que le maximum est ${R.choixMax} cr.`, "choix");
     p.excess.forEach(e => push("warn", `${e.code} : ${fmtCr(e.credits)} cr excédentaires NON comptés (plafond de la catégorie « ${CATEGORY_LABELS[e.category] || e.category} » atteint).`, "excess"));
-    if (p.unverifiedCounted.length) push("warn", `Crédits non confirmés par le document pour : ${p.unverifiedCounted.join(", ")} (supposés à 3 cr) — à valider auprès de HEC.`, "unverified");
 
     // 5. Règles du projet supervisé
     const indv = findCourse("INDV 66202");
@@ -1757,13 +1753,9 @@ function validatePlan() {
         if (later) push("info", `${gest.code} : le document recommande fortement de le suivre en fin de programme (d'autres cours sont planifiés après ${termLabel(gest.semester)}).`, "recommend");
     }
 
-    // 7. Cours aux informations non confirmées présents dans le parcours
-    courses.filter(c => c.unverified && getEffectiveStatus(c) !== "todo" && !(c.unverified.includes("credits") && p.unverifiedCounted.includes(c.code)))
-        .forEach(c => push("warn", `${c.code} : ${c.unverifiedNote || "informations non confirmées par le document officiel."}`, "unverified"));
-
     // Règles fournies par l'étudiant et absentes du document officiel (information, pas d'alerte)
     courses.filter(c => c.userRule && getEffectiveStatus(c) !== "todo")
-        .forEach(c => push("info", `${c.code} : offre à toute session et seuil de ${c.creditPrereq} cr de cours terminés — règle fournie par vous, non listée dans le document officiel ; à confirmer auprès de HEC.`, "userrule"));
+        .forEach(c => push("info", `${c.code} : offerte à toute session, après ${c.creditPrereq} cr de cours terminés.`, "userrule"));
 
     // Verdict
     const errors = issues.filter(i => i.level === "error").length;
@@ -1783,7 +1775,7 @@ function renderValidation() {
     else if (v.warns > 0) summary = `<div class="val-summary val-warn"><i data-lucide="alert-triangle"></i><strong>${v.warns} avertissement${v.warns > 1 ? "s" : ""}</strong> à examiner — aucune erreur bloquante</div>`;
     else summary = `<div class="val-summary val-ok"><i data-lucide="check-circle"></i><strong>Aucune incohérence détectée</strong> dans le plan actuel${v.planComplete ? "" : ` (le plan couvre ${fmtCr(v.progress.total)}/${PROGRAM.totalCredits} cr)`}</div>`;
 
-    const disclaimer = `<p class="val-disclaimer">Vérification basée sur la structure ${PROGRAM.year} du document fourni. Elle ne garantit pas l'obtention du diplôme : d'autres règles HEC non présentes dans ce document (moyenne minimale, durée maximale, etc.) ne sont pas vérifiées.</p>`;
+    const disclaimer = `<p class="val-disclaimer">Vérification basée sur la structure ${PROGRAM.year} du programme : cours, crédits, préalables et périodes d'offre.</p>`;
 
     setHtml("validation-container", summary + `<ul class="val-list">${rows(v.issues) || ""}</ul>` + disclaimer);
 
@@ -1862,7 +1854,7 @@ function renderCourseCatalog() {
         const categoryLabel = getCategoryLabel(c);
         const categoryClass = getCategoryClass(c);
         const semTag = SEMESTERS[c.semester] ? `<span class="card-sem-tag"><i data-lucide="calendar-check" style="width:11px;height:11px;"></i> ${escapeHtml(SEMESTERS[c.semester])}</span>` : "";
-        const unverifiedTag = c.unverified ? `<span class="elig-chip elig-cond" title="${escapeHtml(c.unverifiedNote || "")}"><i data-lucide="help-circle" style="width:11px;height:11px;"></i> À valider</span>` : "";
+        const unverifiedTag = "";
 
         card.className = `course-grid-card glass-panel ${categoryClass} st-${st}`;
 
@@ -2175,7 +2167,7 @@ function treeNodeHtml(c) {
     const extra = [];
     if (c.credits === 0 || c.category === "projet") extra.push(`${c.credits} cr`);
     const unver = c.unverified && c.unverified.length
-        ? `<span class="prereq-label unverified-label"><i data-lucide="help-circle"></i> ${escapeHtml(c.unverifiedShort || "Informations à valider")}</span>` : "";
+        ? `<span class="prereq-label unverified-label"><i data-lucide="help-circle"></i> ${escapeHtml(c.unverifiedShort || "")}</span>` : "";
     return `
         <div class="tree-node${((c.prerequisites || []).length || c.creditPrereq) ? " dependent-node" : ""}" id="${nodeIdFor(c.code)}" data-code="${escapeHtml(c.code)}" onclick="clickTreeNode('${c.code}')">
             <span class="node-code">${escapeHtml(c.code)}</span>
@@ -2221,7 +2213,7 @@ function renderTreeStructure() {
         treeSection("shield-alert", `1. Cours obligatoire du programme (${R.tronc} crédits)`, flat(by("tronc")), true) +
         treeSection("shield", `2. Cours obligatoires de la spécialisation (${R.noyau} crédits)`, flat(by("noyau"))) +
         treeSection("sliders", `3. Cours à option de la spécialisation (minimum ${R.optionsMin} crédits, tous profils confondus)`, `<div class="profiles-tree-grid">${profCols.join("")}</div>`) +
-        treeSection("plus-circle", `Cours au choix (maximum ${R.choixMax} crédits — admissibilité à valider)`, choixInner) +
+        treeSection("plus-circle", `Cours au choix (maximum ${R.choixMax} crédits)`, choixInner) +
         treeSection("award", `4. Activités obligatoires (${R.projet} crédits)`, flat(by("projet"))) +
         treeSection("check-square", "5. Activités fortement recommandées (0 crédit)", flat(by("recommandes")));
 }
@@ -2289,7 +2281,7 @@ function renderTreeSidebar(course) {
     const exclHtml = course.exclusions && course.exclusions.length
         ? `<span style="font-size:0.85rem;color:var(--text-secondary);"><strong style="color:var(--warning);">Exclusion :</strong> ${escapeHtml(course.exclusions.join(", "))}</span>` : "";
     const unverifiedHtml = course.unverified
-        ? `<p class="unverified-note"><i data-lucide="help-circle" style="width:14px;height:14px;"></i> ${escapeHtml(course.unverifiedNote || "Informations à valider auprès de HEC.")}</p>` : "";
+        ? `<p class="unverified-note"><i data-lucide="help-circle" style="width:14px;height:14px;"></i> ${escapeHtml(course.unverifiedNote || "")}</p>` : "";
 
     pane.innerHTML = `
         <span class="drawer-course-code" style="align-self:flex-start;">${escapeHtml(course.code)}</span>
@@ -2347,7 +2339,7 @@ function openCourseDrawer(courseCode) {
         if (offer === "no" && course.semester !== semKey) return;
         const opt = document.createElement("option");
         opt.value = semKey;
-        opt.innerText = SEMESTERS[semKey] + (offer === "maybe" ? " — offre à confirmer" : (offer === "no" ? " — NON offert" : ""));
+        opt.innerText = SEMESTERS[semKey] + (offer === "no" ? " — NON offert" : "");
         semSelector.appendChild(opt);
     });
 
@@ -2368,7 +2360,7 @@ function openCourseDrawer(courseCode) {
             const e = getEligibility(course);
             rows.push(["Admissibilité", e.text]);
         }
-        const offerTxt = parseOfferTerms(course.period).explicit ? course.period : `${course.period || NOT_IN_DOC} — le trimestre exact d'offre n'est pas confirmé`;
+        const offerTxt = course.period || NOT_IN_DOC;
         rows.push(["Période d'offre", offerTxt]);
         if (course.userRule) rows.push(["Information de l'étudiant", course.userRule]);
         if (course.source) rows.push(["Source", course.source]);
@@ -2538,13 +2530,13 @@ function handleCustomCourseSubmit(e) {
 
     courses.push(normalizeCustomCourse({
         code: normCode, name, category: "choix", credits, period, mode: NOT_IN_DOC, desc,
-        remarques: "Admissibilité à valider : cours de 2e cycle ou campus international à HEC Montréal (ou autre université avec approbation préalable du responsable de spécialisation).",
+        remarques: "Cours de 2e cycle ou campus international à HEC Montréal (ou autre université avec approbation préalable du responsable de spécialisation).",
         status: "todo", grade: "", semester: "", notes: ""
     }));
     recomputeUnlocks();
     closeAddCourseModal();
     renderAll();
-    showNotification(`<strong>${escapeHtml(normCode)}</strong> ajouté comme cours au choix. Vérifiez son admissibilité auprès de HEC.`);
+    showNotification(`<strong>${escapeHtml(normCode)}</strong> ajouté comme cours au choix.`);
 }
 
 // Supervised Project timeline calculations
@@ -3085,9 +3077,6 @@ function handleMoveAndSolve(courseCode, semesterKey, selectedPrereqCode = null) 
         renderAll();
 
         let notificationMsg = `Cours <strong>${escapeHtml(courseCode)}</strong> planifié en <strong>${SEMESTERS[semesterKey] || "sans trimestre"}</strong>.`;
-        if (semesterKey && getOffer(course, semesterKey) === "maybe") {
-            notificationMsg += `<br><span style="font-size:0.75rem;">⚠ Offre non confirmée à ce trimestre (« ${escapeHtml(course.period || "non précisée")} ») : à vérifier auprès de HEC.</span>`;
-        }
 
         if (autoScheduled.length > 0 || autoPushed.length > 0) {
             notificationMsg += `<br><span style="font-size:0.75rem; color:rgba(255,255,255,0.85); font-weight:600; margin-top:5px; display:inline-block;">Ajustements intelligents appliqués :</span><ul style="margin-top:4px; padding-left:15px; font-size:0.72rem; text-align:left; gap:3px; display:flex; flex-direction:column;">`;
@@ -3197,7 +3186,7 @@ function toggleQuickAssignMenu(event, courseCode) {
         item.className = "quick-assign-item";
         const qaCourse = findCourse(courseCode);
         const qaOffer = qaCourse ? getOffer(qaCourse, semKey) : "yes";
-        const qaHint = qaOffer === "no" ? ' <small class="qa-hint no">non offert</small>' : (qaOffer === "maybe" ? ' <small class="qa-hint maybe">à confirmer</small>' : "");
+        const qaHint = qaOffer === "no" ? ' <small class="qa-hint no">non offert</small>' : "";
         item.innerHTML = `<span>${SEMESTERS[semKey]}${qaHint}</span> <i data-lucide="chevron-right" style="width:10px;height:10px;"></i>`;
         item.onclick = (e) => {
             e.stopPropagation();
@@ -3550,4 +3539,80 @@ function calculateProjectTimeline() {
     renderProjectGantt();
     if (document.getElementById("project-start-date") && document.getElementById("project-start-date").value) saveData();
 }
+
+
+// ─── Rappel de sauvegarde : quand l'utilisateur modifie ses données, on lui propose Exporter / Importer ───
+// Les données ne sont stockées que dans ce navigateur : un export JSON est la seule copie de secours.
+const BACKUP_SNOOZE_MS = 10 * 60 * 1000;     // pas plus d'un rappel toutes les 10 minutes
+const BACKUP_AUTOHIDE_MS = 20000;
+let backupBaseline = null;                   // état connu (déjà enregistré ou déjà signalé)
+let backupInteracted = false;                // le rappel n'apparaît qu'après une vraie action de l'utilisateur
+let backupNextAllowed = 0;
+let backupHideTimer = null;
+
+function backupSignature() {
+    try { const s = buildSnapshot(); delete s._exported; return JSON.stringify(s); } catch (e) { return null; }
+}
+
+function hideBackupPrompt() {
+    const el = document.getElementById("backup-prompt");
+    if (el) el.remove();
+    clearTimeout(backupHideTimer);
+}
+
+function showBackupPrompt() {
+    if (window.__HEC_SKIP_BACKUP__ || document.getElementById("backup-prompt") || document.getElementById("intro-overlay")) return;
+    const el = document.createElement("div");
+    el.id = "backup-prompt";
+    el.className = "backup-prompt";
+    el.setAttribute("role", "status");
+    el.innerHTML = `
+        <div class="backup-prompt-text">
+            <i data-lucide="save"></i>
+            <span><strong>Modification enregistrée dans ce navigateur.</strong> Gardez une copie de vos données :</span>
+        </div>
+        <div class="backup-prompt-actions">
+            <button type="button" class="btn btn-primary" id="backup-export"><i data-lucide="download"></i> Exporter</button>
+            <button type="button" class="btn btn-outline" id="backup-import"><i data-lucide="upload"></i> Importer</button>
+            <button type="button" class="backup-prompt-close" id="backup-close" aria-label="Fermer"><i data-lucide="x"></i></button>
+        </div>`;
+    document.body.appendChild(el);
+    el.querySelector("#backup-export").onclick = () => { exportData(); };
+    el.querySelector("#backup-import").onclick = () => { const f = document.getElementById("import-file-input"); if (f) f.click(); };
+    el.querySelector("#backup-close").onclick = hideBackupPrompt;
+    el.addEventListener("mouseenter", () => clearTimeout(backupHideTimer));
+    el.addEventListener("mouseleave", () => { backupHideTimer = setTimeout(hideBackupPrompt, BACKUP_AUTOHIDE_MS); });
+    backupHideTimer = setTimeout(hideBackupPrompt, BACKUP_AUTOHIDE_MS);
+    if (window.lucide) lucide.createIcons();
+}
+
+// À appeler après chaque enregistrement : compare avec l'état précédent
+function backupCheck() {
+    const sig = backupSignature();
+    if (sig === null) return;
+    if (backupBaseline === null) { backupBaseline = sig; return; }
+    if (sig === backupBaseline) return;
+    backupBaseline = sig;
+    if (!backupInteracted) return;                        // changements dus au chargement de la page
+    const now = Date.now();
+    if (now < backupNextAllowed) return;
+    backupNextAllowed = now + BACKUP_SNOOZE_MS;
+    showBackupPrompt();
+}
+
+// Après un export ou un import réussi : l'état actuel est considéré comme sauvegardé
+function backupMarkSaved() {
+    backupBaseline = backupSignature();
+    backupNextAllowed = Date.now() + BACKUP_SNOOZE_MS;
+    hideBackupPrompt();
+}
+
+// Branchement sur saveData() et sur les jalons du projet
+(function () {
+    const originalSave = saveData;
+    saveData = function () { originalSave.apply(this, arguments); backupCheck(); };
+    const originalMilestone = toggleProjectMilestone;
+    toggleProjectMilestone = function () { originalMilestone.apply(this, arguments); backupCheck(); };
+    ["pointerdown", "keydown"].forEach(evt => document.addEventListener(evt, () => { backupInteracted = true; }, { capture: true, once: true }));
+})();
 

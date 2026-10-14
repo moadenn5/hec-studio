@@ -3109,3 +3109,41 @@ body.sidebar-collapsed:not(.sidebar-pinned) .sidebar:hover .sidebar-nav {
 .pool-profile-bar { gap:4px; }
 .pool-chip { padding:4px 6px; gap:4px; font-size:.68rem; }
 .pool-chip .pool-chip-n { padding:0 5px; font-size:.62rem; }
+
+/* ── v1.3 : barre de statistiques compacte + trimestres sans défilement horizontal ── */
+.financial-stats-bar { padding:.6rem 1rem; margin-bottom:1rem; border-radius:16px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.5rem .75rem; }
+.fin-stat-item { gap:9px; padding-right:8px; }
+.fin-icon-box { width:32px; height:32px; border-radius:9px; font-size:1rem; flex-shrink:0; }
+.fin-icon-box svg { width:16px; height:16px; }
+.fin-stat-item span { font-size:.62rem; letter-spacing:.3px; line-height:1.15; display:block; }
+.fin-stat-item h4 { font-size:1rem; margin:1px 0 0; line-height:1.2; white-space:nowrap; }
+.fin-stat-item h4 span { display:inline; font-size:.74rem !important; }
+@media (max-width:768px) { .financial-stats-bar { padding:.55rem .8rem; grid-template-columns:repeat(2,minmax(0,1fr)); } .fin-stat-item { border-right:none !important; } }
+
+.planner-board-wrapper { padding:1rem; overflow-x:hidden; }
+.planner-board { grid-template-columns:repeat(auto-fill,minmax(185px,1fr)); gap:.85rem; min-height:0; }
+.planner-column { min-width:0; padding:.85rem; gap:.8rem; border-radius:16px; }
+.planner-column-header { padding-bottom:.55rem; gap:6px; }
+.planner-card .p-code-highlighted { white-space:nowrap; font-size:.72rem !important; padding:2px 7px !important; }
+.planner-card { padding:.6rem .7rem; }
+.column-header-badges { flex-wrap:wrap; gap:5px; }
+.col-badge { padding:2px 8px; font-size:.66rem; }
+.col-badge svg { width:12px; height:12px; }
+
+/* ── Rappel de sauvegarde ── */
+.backup-prompt { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:4000; width:min(640px, calc(100vw - 24px)); box-sizing:border-box;
+  display:flex; align-items:center; justify-content:space-between; gap:.8rem 1rem; flex-wrap:wrap; padding:.7rem .9rem; border-radius:14px;
+  background:linear-gradient(160deg,#171d33,#0d1224); border:1px solid rgba(99,102,241,.45); box-shadow:0 14px 40px rgba(0,0,0,.55); color:#e2e8f0; animation:backupIn .25s ease; }
+@keyframes backupIn { from { opacity:0; transform:translate(-50%,12px) } to { opacity:1; transform:translate(-50%,0) } }
+.backup-prompt-text { display:flex; align-items:center; gap:.6rem; font-size:.8rem; line-height:1.35; flex:1 1 260px; min-width:0; }
+.backup-prompt-text svg { width:18px; height:18px; color:#a5b4fc; flex-shrink:0; }
+.backup-prompt-text strong { color:#fff; }
+.backup-prompt-actions { display:flex; align-items:center; gap:.5rem; flex-shrink:0; }
+.backup-prompt-actions .btn { padding:6px 12px; font-size:.76rem; }
+.backup-prompt-actions .btn svg { width:14px; height:14px; }
+.backup-prompt-close { background:transparent; border:none; color:var(--text-secondary); cursor:pointer; padding:5px; border-radius:8px; }
+.backup-prompt-close:hover { background:rgba(255,255,255,.08); color:#fff; }
+.backup-prompt-close svg { width:16px; height:16px; }
+@media (max-width:480px) { .backup-prompt { bottom:10px; } .backup-prompt-actions { width:100%; } .backup-prompt-actions .btn { flex:1; justify-content:center; } .backup-prompt-close { margin-left:auto; } }
+.financial-stats-bar { grid-template-columns:repeat(auto-fit,minmax(122px,1fr)); }
+.fin-stat-item { gap:7px; padding-right:4px; }
