@@ -55,7 +55,7 @@
             <section id="section-dashboard" class="app-section active">
                 <header class="top-header">
                     <div>
-                        <h1>Intelligence d'Affaires</h1>
+                        <div class="title-row"><h1>Intelligence d'Affaires</h1><button type="button" class="intro-info-btn" onclick="showIntro('section-dashboard', true)" aria-label="Afficher l'aide de cette section" title="Aide sur cette section"><i data-lucide="info"></i></button></div>
                         <p class="subtitle">Cheminement Projet supervisé · Structure 2026-2027 · 45 crédits</p>
                     </div>
                     <div class="header-actions">
@@ -292,7 +292,7 @@
             <section id="section-courses" class="app-section">
                 <header class="top-header">
                     <div>
-                        <h1>Plan de Cours & Notes</h1>
+                        <div class="title-row"><h1>Plan de Cours & Notes</h1><button type="button" class="intro-info-btn" onclick="showIntro('section-courses', true)" aria-label="Afficher l'aide de cette section" title="Aide sur cette section"><i data-lucide="info"></i></button></div>
                         <p class="subtitle">Sélectionnez, notez et évaluez vos cours à HEC Montréal</p>
                     </div>
                     <div class="header-actions">
@@ -327,7 +327,7 @@
             <section id="section-tree" class="app-section">
                 <header class="top-header">
                     <div>
-                        <h1>Arbre de Spécialisation & Prérequis</h1>
+                        <div class="title-row"><h1>Arbre de Spécialisation & Prérequis</h1><button type="button" class="intro-info-btn" onclick="showIntro('section-tree', true)" aria-label="Afficher l'aide de cette section" title="Aide sur cette section"><i data-lucide="info"></i></button></div>
                         <p class="subtitle">Visualisez les dépendances, débloquez les cours avancés et planifiez votre cheminement sans erreurs</p>
                     </div>
                 </header>
@@ -366,7 +366,7 @@
             <section id="section-planner" class="app-section">
                 <header class="top-header">
                     <div>
-                        <h1>Planificateur de Sessions</h1>
+                        <div class="title-row"><h1>Planificateur de Sessions</h1><button type="button" class="intro-info-btn" onclick="showIntro('section-planner', true)" aria-label="Afficher l'aide de cette section" title="Aide sur cette section"><i data-lucide="info"></i></button></div>
                         <p class="subtitle">Répartissez vos cours par trimestre en respectant préalables et offre. L'offre non confirmée par le document est signalée, jamais présumée.</p>
                     </div>
                 </header>
@@ -426,6 +426,8 @@
 
                 <div class="planner-alerts glass-panel" id="planner-alerts" style="display:none;"></div>
 
+                <div class="advice-card glass-panel" id="planner-advice"></div>
+
                 <div class="planner-layout-split">
                     <!-- Left Side: Pools of unscheduled courses -->
                     <aside class="planner-pool glass-panel">
@@ -463,7 +465,7 @@
             <section id="section-project" class="app-section">
                 <header class="top-header">
                     <div>
-                        <h1>Projet Supervisé (9 cr)</h1>
+                        <div class="title-row"><h1>Projet Supervisé (9 cr)</h1><button type="button" class="intro-info-btn" onclick="showIntro('section-project', true)" aria-label="Afficher l'aide de cette section" title="Aide sur cette section"><i data-lucide="info"></i></button></div>
                         <p class="subtitle">Suivez et planifiez précisément le calendrier de vos 6 mois de projet de recherche ou d'intervention</p>
                     </div>
                 </header>
@@ -537,7 +539,7 @@
             <section id="section-settings" class="app-section">
                 <header class="top-header">
                     <div>
-                        <h1>Paramètres généraux</h1>
+                        <div class="title-row"><h1>Paramètres généraux</h1><button type="button" class="intro-info-btn" onclick="showIntro('section-settings', true)" aria-label="Afficher l'aide de cette section" title="Aide sur cette section"><i data-lucide="info"></i></button></div>
                         <p class="subtitle">Gérez vos préférences de session</p>
                     </div>
                 </header>

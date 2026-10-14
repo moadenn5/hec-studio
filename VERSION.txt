@@ -1,1 +1,1 @@
-1.0 —
+1.1 — 14 octobre 2026 (version figée : ne plus modifier ce dossier ; le travail continue en v2). Ajoute : aide d'introduction par section (pop-up + icône ⓘ) et conseils de choix de cours de Léo Belzile dans le planificateur.

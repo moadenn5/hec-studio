@@ -23,7 +23,7 @@ const COST_PER_CREDIT = 840;
 
 const SCHEMA_VERSION = 2;
 // Version de l'application (affichée dans Paramètres → À propos)
-const APP_VERSION = "1.0";
+const APP_VERSION = "1.1";
 const APP_VERSION_DATE = "14 octobre 2026";
 
 // Isolation du stockage local. Sur un site hébergé (ex. GitHub Pages : utilisateur.github.io/depot/), TOUS les dépôts
@@ -1421,6 +1421,7 @@ function renderAll() {
     updateFinancialStats();
     renderValidation();
     renderArchive();
+    if (typeof renderPlannerAdvice === "function") renderPlannerAdvice();
     saveData();
     if (window.lucide) lucide.createIcons();
 }
@@ -3231,3 +3232,225 @@ function closeQuickMenu() {
     }
     window.removeEventListener("click", closeQuickMenu);
 }
+
+// ─── Aide d'introduction par section (1re visite) + icône ⓘ pour la rouvrir ───
+const INTRO_CONTENT = {
+    "section-dashboard": {
+        icon: "layout-dashboard", title: "Tableau de bord",
+        what: "Votre vue d'ensemble du M. Sc. Intelligence d'affaires (projet supervisé) : 45 crédits.",
+        goal: "Savoir en un coup d'œil où vous en êtes et ce qu'il reste à faire.",
+        how: ["Les tuiles du haut montrent vos crédits : terminés, en cours, planifiés, restants.",
+              "La carte « Validation du cheminement » signale les problèmes de votre plan.",
+              "Cliquez sur un cours dans les listes pour ouvrir sa fiche."]
+    },
+    "section-courses": {
+        icon: "book-open", title: "Mes cours",
+        what: "Le catalogue des 26 cours du programme.",
+        goal: "Consulter chaque cours et suivre votre avancement : statut, note, trimestre.",
+        how: ["Filtrez avec les onglets (catégories) ou la barre de recherche.",
+              "Cliquez sur une carte pour ouvrir la fiche et saisir statut, note, trimestre et notes.",
+              "La pastille « Admissible » ou « Préalable manquant » indique si vous pouvez le suivre."]
+    },
+    "section-tree": {
+        icon: "network", title: "Arbre d'études",
+        what: "La carte des cours du programme et de leurs préalables.",
+        goal: "Comprendre dans quel ordre suivre vos cours.",
+        how: ["Cliquez sur un cours : ses préalables s'illuminent en rouge, les cours qu'il débloque en vert.",
+              "Un trait en pointillés signifie « l'un OU l'autre ».",
+              "Les couleurs montrent Terminé, En cours ou Planifié ; « Fiche de cours » ouvre le détail."]
+    },
+    "section-planner": {
+        icon: "calendar-range", title: "Planificateur",
+        what: "Un calendrier par trimestre, d'automne 2026 à été 2028.",
+        goal: "Répartir vos 45 crédits en respectant les préalables et les trimestres d'offre.",
+        how: ["Glissez une carte de la liste de gauche vers un trimestre, ou cliquez « Planifier » puis choisissez le trimestre.",
+              "Le × d'une carte la retire du calendrier ; vous pouvez aussi la glisser vers un autre trimestre.",
+              "Filtrez la liste par catégorie, profil (Marketing, Sciences de la décision, TI) ou recherche.",
+              "Un ⚠ signale un problème : survolez-le pour le détail.",
+              "Ouvrez « Conseils pour choisir vos cours » pour les recommandations d'un professeur."]
+    },
+    "section-project": {
+        icon: "folder-kanban", title: "Projet supervisé",
+        what: "Le suivi de votre projet supervisé (9 crédits, 6 mois maximum).",
+        goal: "Planifier les étapes jusqu'au dépôt final.",
+        how: ["Entrez votre date de début : la chronologie se calcule automatiquement.",
+              "Cochez les jalons au fil du projet (ETHI 66200, sujet approuvé, rédaction, dépôt).",
+              "Rappel : le sujet doit être soumis avant d'avoir cumulé 36 crédits de cours."]
+    },
+    "section-settings": {
+        icon: "settings", title: "Paramètres",
+        what: "Vos objectifs et la gestion de vos données.",
+        goal: "Garder vos données en sécurité et ajuster vos objectifs.",
+        how: ["Fixez votre moyenne cible et votre année de fin.",
+              "Exportez régulièrement vos données (fichier JSON) : elles ne sont stockées que dans ce navigateur.",
+              "Importez un export pour restaurer vos données ou changer d'appareil."]
+    }
+};
+
+const INTRO_STORAGE_KEY = "hec_intro_seen";
+let introOpenSection = null;
+let introReturnFocus = null;
+
+function introSeenMap() {
+    try { const m = JSON.parse(storageGet(INTRO_STORAGE_KEY) || "{}"); return (m && typeof m === "object") ? m : {}; } catch (e) { return {}; }
+}
+function introMarkSeen(sectionId) {
+    const m = introSeenMap(); m[sectionId] = true;
+    storageSet(INTRO_STORAGE_KEY, JSON.stringify(m));
+}
+
+function closeIntro() {
+    const ov = document.getElementById("intro-overlay");
+    if (!ov) return;
+    if (introOpenSection) introMarkSeen(introOpenSection);
+    ov.remove();
+    introOpenSection = null;
+    document.removeEventListener("keydown", introKeyHandler, true);
+    if (introReturnFocus && document.contains(introReturnFocus)) { try { introReturnFocus.focus(); } catch (e) { /* ignore */ } }
+    introReturnFocus = null;
+}
+
+function introKeyHandler(e) {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeIntro(); return; }
+    if (e.key === "Tab") {           // le focus reste dans la fenêtre
+        const btns = [...document.querySelectorAll("#intro-overlay button")];
+        if (!btns.length) return;
+        const first = btns[0], last = btns[btns.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+}
+
+// force = true quand l'utilisateur clique sur l'icône ⓘ
+function showIntro(sectionId, force) {
+    const c = INTRO_CONTENT[sectionId];
+    if (!c) return;
+    if (!force && (window.__HEC_SKIP_INTRO__ || introSeenMap()[sectionId])) return;
+    if (document.getElementById("intro-overlay")) closeIntro();
+    introReturnFocus = document.activeElement;
+    introOpenSection = sectionId;
+    const ov = document.createElement("div");
+    ov.id = "intro-overlay";
+    ov.className = "intro-overlay";
+    ov.setAttribute("role", "dialog");
+    ov.setAttribute("aria-modal", "true");
+    ov.setAttribute("aria-labelledby", "intro-title");
+    ov.innerHTML = `
+        <div class="intro-card" data-section="${sectionId}">
+            <div class="intro-head">
+                <span class="intro-head-icon"><i data-lucide="${c.icon}"></i></span>
+                <h2 id="intro-title">${escapeHtml(c.title)}</h2>
+                <button type="button" class="intro-close" aria-label="Fermer" onclick="closeIntro()"><i data-lucide="x"></i></button>
+            </div>
+            <div class="intro-block"><h4>C'est quoi ?</h4><p>${escapeHtml(c.what)}</p></div>
+            <div class="intro-block"><h4>Objectif</h4><p>${escapeHtml(c.goal)}</p></div>
+            <div class="intro-block"><h4>Comment s'en servir</h4><ul>${c.how.map(h => `<li>${escapeHtml(h)}</li>`).join("")}</ul></div>
+            <div class="intro-footer">
+                <span class="intro-hint"><i data-lucide="info"></i> Réaffichez cette aide avec l'icône ⓘ à côté du titre.</span>
+                <button type="button" class="btn btn-primary" id="intro-ok" onclick="closeIntro()">Compris</button>
+            </div>
+        </div>`;
+    ov.addEventListener("mousedown", e => { if (e.target === ov) closeIntro(); });
+    document.body.appendChild(ov);
+    document.addEventListener("keydown", introKeyHandler, true);
+    if (window.lucide) lucide.createIcons();
+    const ok = document.getElementById("intro-ok"); if (ok) ok.focus();
+}
+
+// Affiche l'aide la première fois qu'une section devient active (navigation latérale ou boutons internes)
+function initSectionIntros() {
+    const sections = document.querySelectorAll(".app-section");
+    const check = el => { if (el.classList.contains("active")) setTimeout(() => showIntro(el.id, false), 250); };
+    const obs = new MutationObserver(muts => muts.forEach(m => { if (m.attributeName === "class") check(m.target); }));
+    sections.forEach(s => obs.observe(s, { attributes: true, attributeFilter: ["class"] }));
+    const active = document.querySelector(".app-section.active");
+    if (active) check(active);
+}
+document.addEventListener("DOMContentLoaded", initSectionIntros);
+
+
+// ─── Conseils pour choisir ses cours (résumé des recommandations de Léo Belzile, professeur) ───
+const ADVICE_SOURCE_URL = "https://lbelzile.bitbucket.io/ia.html#cours-obligatoires";
+const ADVICE_STORAGE_KEY = "hec_advice_open";
+const ADVICE_STATS_ORDER = ["MATH 60619", "MATH 60602", "MATH 60600"];
+
+const ADVICE_SUMMARY = [
+    "<strong>Spécialisation :</strong> 5 cours obligatoires (3 en science des données, 1 en TI, 1 en marketing), plus GEST 60401, obligatoire dans toutes les spécialisations — offert très souvent, y compris le soir et l'été.",
+    "<strong>Ordre en statistiques :</strong> MATH 60619 (SAS) → MATH 60602 (R) → MATH 60600 (Python et R).",
+    "<strong>Pas les trois à la fois :</strong> trop de logiciels à apprendre d'un coup. Si vous commencez à l'automne : 60619 et 60602 à l'automne, 60600 à l'hiver.",
+    "<strong>MARK 60105 :</strong> offert à l'hiver seulement, après au moins un cours de statistique obligatoire.",
+    "<strong>TECH 60701</strong> (offert chaque trimestre) : un cours de préparation, TECH 20712, peut être exigé avant. Si c'est votre cas, inscrivez-vous-y dès le 1er trimestre (hors des 45 crédits, non géré par cet outil).",
+    "<strong>TECH 60771</strong> (option) : fortement recommandé si vous n'avez pas de cours équivalent au 1er cycle ; les tableaux de bord servent dans la plupart des stages."
+];
+
+// Position chronologique d'un cours pour les conseils : index du trimestre, -1 = réussi sans trimestre, null = non placé
+function adviceOrder(c) {
+    if (!c) return null;
+    const i = SEMESTER_ORDER.indexOf(c.semester);
+    if (i !== -1) return i;
+    return c.status === "done" ? -1 : null;
+}
+
+// Conseils appliqués au plan de l'utilisateur (non bloquants : ce sont des recommandations, pas des règles)
+function getPlanningAdvice() {
+    const out = [];
+    const o = Object.fromEntries(ADVICE_STATS_ORDER.map(code => [code, adviceOrder(findCourse(code))]));
+
+    const same = ADVICE_STATS_ORDER.map(c => o[c]).filter(v => v !== null && v >= 0);
+    if (same.length === 3 && same[0] === same[1] && same[1] === same[2]) {
+        out.push({ level: "warn", text: `Vos 3 cours de statistique sont tous en ${SEMESTERS[SEMESTER_ORDER[same[0]]]} : fortement déconseillé (trop de logiciels en même temps). Étalez-les sur au moins deux trimestres.` });
+    }
+    const wrong = [];
+    [["MATH 60619", "MATH 60602"], ["MATH 60602", "MATH 60600"], ["MATH 60619", "MATH 60600"]].forEach(([first, second]) => {
+        if (o[first] !== null && o[second] !== null && o[second] < o[first]) wrong.push(`${second} avant ${first}`);
+    });
+    if (wrong.length) out.push({ level: "tip", text: `Ordre conseillé : MATH 60619 → 60602 → 60600. Dans votre plan : ${wrong.join(" ; ")}.` });
+
+    const mark = findCourse("MARK 60105");
+    if (mark && mark.status !== "done" && adviceOrder(mark) === null) {
+        out.push({ level: "tip", text: "MARK 60105 n'est pas encore placé : il n'est offert qu'à l'hiver, après au moins un cours de statistique." });
+    }
+    const dash = findCourse("TECH 60771");
+    if (dash) {
+        if (adviceOrder(dash) === null) out.push({ level: "tip", text: "TECH 60771 (tableaux de bord) : à envisager si vous n'avez pas de cours équivalent au 1er cycle." });
+        else out.push({ level: "ok", text: "TECH 60771 (tableaux de bord) fait partie de votre plan." });
+    }
+    return out;
+}
+
+function toggleAdvice() {
+    const open = storageGet(ADVICE_STORAGE_KEY) !== "false";
+    storageSet(ADVICE_STORAGE_KEY, open ? "false" : "true");
+    renderPlannerAdvice();
+}
+
+function renderPlannerAdvice() {
+    const box = document.getElementById("planner-advice");
+    if (!box) return;
+    const open = storageGet(ADVICE_STORAGE_KEY) !== "false";
+    const tips = getPlanningAdvice();
+    const icon = { warn: "alert-triangle", tip: "lightbulb", ok: "check-circle" };
+    box.innerHTML = `
+        <button type="button" class="advice-toggle" onclick="toggleAdvice()" aria-expanded="${open}" aria-controls="advice-body">
+            <span class="advice-title"><i data-lucide="lightbulb"></i> Conseils pour choisir vos cours</span>
+            <i data-lucide="${open ? "chevron-up" : "chevron-down"}"></i>
+        </button>
+        <div id="advice-body" class="advice-body"${open ? "" : " hidden"}>
+            <p class="advice-source">Conseils de <strong>Léo Belzile</strong>, professeur — source :
+                <a href="${ADVICE_SOURCE_URL}" target="_blank" rel="noopener noreferrer">lbelzile.bitbucket.io/ia.html#cours-obligatoires</a>.
+                <em>Avis d'un professeur, pas des règles officielles de HEC.</em></p>
+            <div class="advice-cols">
+                <div>
+                    <h4>L'essentiel</h4>
+                    <ul class="advice-list">${ADVICE_SUMMARY.map(t => `<li>${t}</li>`).join("")}</ul>
+                </div>
+                <div>
+                    <h4>Dans votre plan</h4>
+                    ${tips.length ? `<ul class="advice-live">${tips.map(t => `<li class="advice-${t.level}"><i data-lucide="${icon[t.level]}"></i><span>${escapeHtml(t.text)}</span></li>`).join("")}</ul>`
+                                  : `<p class="text-secondary" style="font-size:0.8rem;">Aucun conseil particulier pour l'instant.</p>`}
+                </div>
+            </div>
+        </div>`;
+    if (window.lucide) lucide.createIcons();
+}
+
