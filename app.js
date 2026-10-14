@@ -23,7 +23,7 @@ const COST_PER_CREDIT = 840;
 
 const SCHEMA_VERSION = 2;
 // Version de l'application (affichée dans Paramètres → À propos)
-const APP_VERSION = "1.3";
+const APP_VERSION = "1.5";
 const APP_VERSION_DATE = "14 octobre 2026";
 
 // Isolation du stockage local. Sur un site hébergé (ex. GitHub Pages : utilisateur.github.io/depot/), TOUS les dépôts
@@ -3262,6 +3262,15 @@ const INTRO_CONTENT = {
               "Cochez les jalons au fil du projet (ETHI 66200, sujet approuvé, rédaction, dépôt).",
               "Rappel : le sujet doit être soumis avant d'avoir cumulé 36 crédits de cours."]
     },
+    "section-summaries": {
+        icon: "library", title: "Résumés partagés",
+        what: "Une bibliothèque de résumés déposés par les étudiant·e·s HEC, classés par cours.",
+        goal: "Réviser plus vite avec les synthèses des autres, et partager les vôtres.",
+        how: ["Connectez-vous avec votre adresse @hec.ca : un code vous est envoyé par courriel.",
+              "« Ajouter un résumé » : choisissez le cours, indiquez le chapitre, le nom et une note, puis joignez le fichier.",
+              "Les résumés sont groupés par catégorie de cours (mêmes couleurs que le catalogue) ; filtrez ou cherchez.",
+              "Partagez uniquement vos propres synthèses. Un contenu problématique se signale avec « Signaler »."]
+    },
     "section-settings": {
         icon: "settings", title: "Paramètres",
         what: "Vos objectifs et la gestion de vos données.",
@@ -3543,11 +3552,9 @@ function calculateProjectTimeline() {
 
 // ─── Rappel de sauvegarde : quand l'utilisateur modifie ses données, on lui propose Exporter / Importer ───
 // Les données ne sont stockées que dans ce navigateur : un export JSON est la seule copie de secours.
-const BACKUP_SNOOZE_MS = 10 * 60 * 1000;     // pas plus d'un rappel toutes les 10 minutes
-const BACKUP_AUTOHIDE_MS = 20000;
+// Le rappel s'affiche après CHAQUE modification et reste visible jusqu'à un export, un import ou la fermeture (×).
 let backupBaseline = null;                   // état connu (déjà enregistré ou déjà signalé)
 let backupInteracted = false;                // le rappel n'apparaît qu'après une vraie action de l'utilisateur
-let backupNextAllowed = 0;
 let backupHideTimer = null;
 
 function backupSignature() {
@@ -3580,9 +3587,6 @@ function showBackupPrompt() {
     el.querySelector("#backup-export").onclick = () => { exportData(); };
     el.querySelector("#backup-import").onclick = () => { const f = document.getElementById("import-file-input"); if (f) f.click(); };
     el.querySelector("#backup-close").onclick = hideBackupPrompt;
-    el.addEventListener("mouseenter", () => clearTimeout(backupHideTimer));
-    el.addEventListener("mouseleave", () => { backupHideTimer = setTimeout(hideBackupPrompt, BACKUP_AUTOHIDE_MS); });
-    backupHideTimer = setTimeout(hideBackupPrompt, BACKUP_AUTOHIDE_MS);
     if (window.lucide) lucide.createIcons();
 }
 
@@ -3594,16 +3598,12 @@ function backupCheck() {
     if (sig === backupBaseline) return;
     backupBaseline = sig;
     if (!backupInteracted) return;                        // changements dus au chargement de la page
-    const now = Date.now();
-    if (now < backupNextAllowed) return;
-    backupNextAllowed = now + BACKUP_SNOOZE_MS;
     showBackupPrompt();
 }
 
 // Après un export ou un import réussi : l'état actuel est considéré comme sauvegardé
 function backupMarkSaved() {
     backupBaseline = backupSignature();
-    backupNextAllowed = Date.now() + BACKUP_SNOOZE_MS;
     hideBackupPrompt();
 }
 
@@ -3615,4 +3615,472 @@ function backupMarkSaved() {
     toggleProjectMilestone = function () { originalMilestone.apply(this, arguments); backupCheck(); };
     ["pointerdown", "keydown"].forEach(evt => document.addEventListener(evt, () => { backupInteracted = true; }, { capture: true, once: true }));
 })();
+
+
+// ─── Adaptation iPad / petits écrans : barre latérale réduite par défaut tant que l'utilisateur n'a pas choisi ───
+function loadSidebarState() {
+    sidebarPinned = storageGet("hec_sidebar_pinned") === "true";
+    const saved = storageGet("hec_sidebar_collapsed");
+    const tabletWidth = window.innerWidth > 700 && window.innerWidth <= 1100;
+    sidebarCollapsed = saved === null ? tabletWidth : saved === "true";
+    if (sidebarPinned) sidebarCollapsed = false;
+    applySidebarState();
+}
+
+
+// ─── Bibliothèque de résumés partagés (réservée aux adresses @hec.ca) ───────────────────────────
+// Les fichiers et la liste vivent sur un serveur Supabase (voir SETUP_RESUMES.md) : connexion par code envoyé
+// à l'adresse @hec.ca, lecture et dépôt réservés aux comptes @hec.ca (règles RLS côté serveur).
+// Tant que config.js n'est pas rempli, la section est masquée (sauf avec ?resumes=demo : mode démo sans enregistrement).
+const SUMMARIES_CFG = Object.assign({ mode: "off", supabaseUrl: "", supabaseAnonKey: "" }, (typeof window !== "undefined" && window.HEC_SUMMARIES) || {});
+const SUMMARY_DOMAIN = "@hec.ca";
+const SUMMARY_MAX_BYTES = 15 * 1024 * 1024;
+const SUMMARY_EXT = [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"];
+const SUMMARY_SDK_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0/dist/umd/supabase.js";
+const SUMMARY_GROUPS = [
+    { cls: "cat-tronc", label: "Obligatoire Programme" },
+    { cls: "cat-noyau", label: "Obligatoire Spécialisation" },
+    { cls: "prof-marketing", label: "Option · Marketing" },
+    { cls: "prof-decision", label: "Option · Sciences de la décision" },
+    { cls: "prof-ti", label: "Option · Technologies de l'information" },
+    { cls: "cat-choix", label: "Cours au choix" },
+    { cls: "cat-projet", label: "Activités obligatoires" },
+    { cls: "cat-recommandes", label: "Activités recommandées" },
+    { cls: "cat-autre", label: "Autres cours" }
+];
+const SUMMARY_REPORT_REASONS = ["Droit d'auteur", "Contenu inapproprié", "Mauvais cours / chapitre", "Autre"];
+
+const sumState = { consent: false, backend: null, user: null, admin: false, rows: [], loaded: false, loading: false, error: "",
+                   step: "email", email: "", search: "", cat: "all", adding: false, busy: false, reportFor: null, deleteFor: null };
+
+function summariesEnabled() {
+    if (SUMMARIES_CFG.mode === "supabase" && SUMMARIES_CFG.supabaseUrl && SUMMARIES_CFG.supabaseAnonKey) return true;
+    return /[?&]resumes=demo\b/.test(location.search);
+}
+function isHecEmail(e) { return /^[^\s@]+@hec\.ca$/i.test(String(e || "").trim()); }
+function sumBytes(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : Math.max(1, Math.round(n / 1024)) + " Ko"; }
+function sumDate(iso) { try { return new Date(iso).toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" }); } catch (e) { return ""; } }
+function sumAuthorLabel(email) {
+    const local = String(email || "").split("@")[0].split(/[._-]+/).filter(Boolean).slice(0, 3);
+    return local.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ").slice(0, 60) || "Étudiant HEC";
+}
+
+// ── Mode démo (aucun enregistrement) — sert aussi aux tests ──
+function createDemoBackend() {
+    let user = null, rows = [], files = {}, reports = [], n = 0;
+    return {
+        kind: "demo",
+        async init() { return null; },
+        async sendCode(email) { return true; },
+        async verifyCode(email, code) { if (String(code).trim() !== "123456") throw new Error("Code invalide ou expiré."); user = { id: "demo-user", email: email.trim().toLowerCase() }; return user; },
+        async signOut() { user = null; },
+        getUser() { return user; },
+        async isAdmin() { return false; },
+        async list() { return rows.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)); },
+        async add(meta, file) {
+            const id = "demo-" + (++n);
+            files[id] = file;
+            const row = { id, ...meta, file_name: file.name, file_size: file.size, mime_type: file.type || "", author_id: user.id, created_at: new Date().toISOString() };
+            rows.push(row); return row;
+        },
+        async remove(row) { rows = rows.filter(r => r.id !== row.id); delete files[row.id]; },
+        async fileUrl(row) { return URL.createObjectURL(files[row.id]); },
+        async report(row, reason) { reports.push({ id: row.id, reason }); }
+    };
+}
+
+// ── Supabase ──
+function loadSupabaseSdk() {
+    return new Promise((resolve, reject) => {
+        if (window.supabase && window.supabase.createClient) return resolve(window.supabase);
+        const s = document.createElement("script");
+        s.src = SUMMARY_SDK_URL; s.crossOrigin = "anonymous";
+        s.onload = () => (window.supabase && window.supabase.createClient) ? resolve(window.supabase) : reject(new Error("SDK indisponible"));
+        s.onerror = () => reject(new Error("Impossible de charger le service de connexion."));
+        document.head.appendChild(s);
+    });
+}
+function createSupabaseBackend() {
+    let sb = null, user = null;
+    const BUCKET = "summaries";
+    const need = () => { if (!sb) throw new Error("Service non initialisé."); return sb; };
+    return {
+        kind: "supabase",
+        async init() {
+            const sdk = await loadSupabaseSdk();
+            sb = sdk.createClient(SUMMARIES_CFG.supabaseUrl, SUMMARIES_CFG.supabaseAnonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+            const { data } = await sb.auth.getSession();
+            user = data && data.session ? data.session.user : null;
+            sb.auth.onAuthStateChange((evt, session) => {
+                const u = session ? session.user : null;
+                if ((u && u.id) !== (user && user.id)) { user = u; if (typeof sumOnAuthChange === "function") sumOnAuthChange(); }
+            });
+            return user;
+        },
+        async sendCode(email) {
+            const { error } = await need().auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: true } });
+            if (error) throw new Error(error.message || "Envoi impossible.");
+            return true;
+        },
+        async verifyCode(email, code) {
+            const { data, error } = await need().auth.verifyOtp({ email: email.trim().toLowerCase(), token: String(code).trim(), type: "email" });
+            if (error) throw new Error("Code invalide ou expiré.");
+            user = data.user || (data.session && data.session.user) || null; return user;
+        },
+        async signOut() { await need().auth.signOut(); user = null; },
+        getUser() { return user; },
+        async isAdmin() {
+            const { data } = await need().from("app_admins").select("email").limit(1);
+            return !!(data && data.length);
+        },
+        async list() {
+            const { data, error } = await need().from("summaries").select("*").order("created_at", { ascending: false });
+            if (error) throw new Error(error.message || "Lecture impossible.");
+            return data || [];
+        },
+        async add(meta, file) {
+            const client = need();
+            const safe = file.name.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Za-z0-9._-]+/g, "_").slice(-80);
+            const path = `${user.id}/${Date.now()}_${safe}`;
+            const up = await client.storage.from(BUCKET).upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+            if (up.error) throw new Error(up.error.message || "Envoi du fichier impossible.");
+            const row = { ...meta, file_path: path, file_name: file.name, file_size: file.size, mime_type: file.type || null };
+            const ins = await client.from("summaries").insert(row).select().single();
+            if (ins.error) { await client.storage.from(BUCKET).remove([path]); throw new Error(ins.error.message || "Enregistrement impossible."); }
+            return ins.data;
+        },
+        async remove(row) {
+            const client = need();
+            const st = await client.storage.from(BUCKET).remove([row.file_path]);
+            if (st.error) throw new Error(st.error.message || "Suppression impossible.");
+            const del = await client.from("summaries").delete().eq("id", row.id);
+            if (del.error) throw new Error(del.error.message || "Suppression impossible.");
+        },
+        async fileUrl(row) {
+            const { data, error } = await need().storage.from(BUCKET).createSignedUrl(row.file_path, 120);
+            if (error || !data) throw new Error("Fichier introuvable.");
+            return data.signedUrl;
+        },
+        async report(row, reason) {
+            const { error } = await need().from("reports").insert({ summary_id: row.id, reason });
+            if (error && !/duplicate/i.test(error.message || "")) throw new Error(error.message || "Signalement impossible.");
+        }
+    };
+}
+
+
+const SUMMARY_CONTACT = "moad.en-nadif@hec.ca";
+function summaryPrivacyHtml() {
+    return `<details class="sum-privacy" id="sum-privacy">
+        <summary><i data-lucide="shield"></i> Confidentialité et conditions d'utilisation</summary>
+        <div class="sum-privacy-body">
+            <h4>Qui exploite cette section</h4>
+            <p>Outil étudiant <strong>non officiel, non affilié à HEC Montréal</strong>, développé par EN-NADIF Moad. Contact : <a href="mailto:${SUMMARY_CONTACT}">${SUMMARY_CONTACT}</a>.</p>
+            <h4>Données recueillies</h4>
+            <ul>
+                <li>Votre adresse ${SUMMARY_DOMAIN} (elle contient souvent votre nom) et l'adresse IP de connexion, pour ouvrir la session et protéger le service.</li>
+                <li>Les fichiers que vous déposez, avec le cours, le chapitre, le titre, la note, le nom et la taille du fichier, la date et un identifiant d'auteur interne.</li>
+                <li>Vos signalements (le résumé visé et le motif).</li>
+            </ul>
+            <p>Le planificateur lui-même (cours, notes, plan) reste dans votre navigateur et n'est jamais envoyé. Aucune statistique de visite ni publicité.</p>
+            <h4>Qui voit quoi</h4>
+            <ul>
+                <li>Les personnes connectées avec une adresse ${SUMMARY_DOMAIN} voient vos résumés (titre, note, fichier, date) et la mention « Étudiant HEC », ou votre nom si vous cochez « Afficher mon nom ». Votre adresse n'est pas affichée.</li>
+                <li>L'exploitant peut consulter les adresses des comptes, les dépôts et les signalements pour modérer la bibliothèque.</li>
+            </ul>
+            <h4>Hébergement</h4>
+            <p>Les données sont hébergées par Supabase sur des serveurs aux États-Unis ; Brevo envoie les courriels de connexion. Vos renseignements sont donc traités <strong>hors du Québec</strong>.</p>
+            <h4>Conservation et suppression</h4>
+            <p>Vous pouvez supprimer vos résumés à tout moment. Pour accéder à vos renseignements, les corriger ou faire supprimer votre compte, écrivez à ${SUMMARY_CONTACT} : réponse sous 30 jours.</p>
+            <h4>Règles de partage</h4>
+            <ul>
+                <li>Déposez uniquement <strong>vos propres synthèses</strong>, dont vous avez le droit de disposer.</li>
+                <li>Interdits : examens, corrigés, travaux d'autres personnes, diapositives ou textes de cours copiés tels quels, tout document protégé par le droit d'auteur dont vous n'avez pas les droits.</li>
+                <li>Respectez les règles d'intégrité de HEC Montréal. Vous êtes responsable de ce que vous déposez.</li>
+                <li>Un résumé signalé ou contraire à ces règles est retiré. L'exploitant peut supprimer tout résumé.</li>
+            </ul>
+            <h4>Service</h4>
+            <p>Section offerte gratuitement et telle quelle ; elle peut être modifiée ou interrompue.</p>
+        </div>
+    </details>`;
+}
+
+// ── Mise en route ──
+async function initSummaries() {
+    const nav = document.querySelector('.nav-item[data-target="section-summaries"]');
+    const on = summariesEnabled();
+    if (nav) nav.style.display = on ? "" : "none";
+    if (!on) return;
+    sumState.backend = SUMMARIES_CFG.mode === "supabase" && SUMMARIES_CFG.supabaseUrl ? createSupabaseBackend() : createDemoBackend();
+    try {
+        await sumState.backend.init();
+        sumState.user = sumState.backend.getUser();
+    } catch (e) { sumState.error = e.message || "Service indisponible."; }
+    renderSummaries();
+    const sec = document.getElementById("section-summaries");
+    if (sec && sec.classList.contains("active")) sumLoad();
+}
+async function sumOnAuthChange() {
+    sumState.user = sumState.backend.getUser(); sumState.loaded = false; sumState.rows = []; sumState.admin = false;
+    renderSummaries();
+    if (sumState.user) sumLoad();
+}
+async function sumLoad(force) {
+    if (!sumState.backend || !sumState.user || sumState.loading || (sumState.loaded && !force)) return;
+    sumState.loading = true; sumState.error = ""; renderSummaryList();
+    try {
+        sumState.admin = await sumState.backend.isAdmin().catch(() => false);
+        sumState.rows = await sumState.backend.list(); sumState.loaded = true;
+    } catch (e) { sumState.error = e.message || "Lecture impossible."; }
+    sumState.loading = false; renderSummaries();
+}
+
+// ── Rendu ──
+function sumCourseOf(code) { return courses.find(c => c.code === code); }
+function sumGroupOf(code) { const c = sumCourseOf(code); const cls = c ? getCategoryClass(c) : ""; return cls || "cat-autre"; }
+
+function renderSummaries() {
+    const root = document.getElementById("summaries-root");
+    if (!root || !summariesEnabled()) return;
+    const demo = sumState.backend && sumState.backend.kind === "demo";
+    const banner = demo ? `<div class="sum-banner sum-demo"><i data-lucide="flask-conical"></i><span><strong>Mode démo</strong> : rien n'est enregistré, tout disparaît au rechargement. Code de connexion de test : <code>123456</code>.</span></div>` : "";
+    const rules = `<div class="sum-banner"><i data-lucide="shield-check"></i><span>Bibliothèque réservée aux personnes connectées avec une adresse <strong>${SUMMARY_DOMAIN}</strong>. Partagez vos <strong>propres synthèses</strong> : pas d'examens ni de corrigés, pas de documents du professeur copiés tels quels. Outil étudiant <strong>non affilié à HEC Montréal</strong>.</span></div>`;
+    if (!sumState.user) {
+        root.innerHTML = banner + rules + `
+        <div class="sum-auth glass-panel">
+            <h3><i data-lucide="mail"></i> Connexion avec votre courriel HEC</h3>
+            ${sumState.step === "email" ? `
+              <p class="text-secondary">Entrez votre adresse ${SUMMARY_DOMAIN} : un code de connexion vous sera envoyé (aucun mot de passe).</p>
+              <form id="sum-email-form" class="sum-inline" novalidate>
+                <input type="email" id="sum-email" placeholder="prenom.nom@hec.ca" autocomplete="email" value="${escapeHtml(sumState.email)}" required>
+                <button class="btn btn-primary" type="submit" id="sum-send">Recevoir un code</button>
+                <label class="sum-check sum-consent"><input type="checkbox" id="sum-consent"${sumState.consent ? " checked" : ""}><span>J'ai lu la <a href="#sum-privacy" id="sum-open-privacy">confidentialité et les conditions</a> et j'accepte (données hébergées hors Québec, partage de mes propres synthèses seulement).</span></label>
+              </form>` : `
+              <p class="text-secondary">Un code a été envoyé à <strong>${escapeHtml(sumState.email)}</strong>. Entrez-le ci-dessous (pensez aux courriels indésirables).</p>
+              <form id="sum-code-form" class="sum-inline" novalidate>
+                <input type="text" id="sum-code" inputmode="numeric" autocomplete="one-time-code" placeholder="Code reçu" maxlength="10" required>
+                <button class="btn btn-primary" type="submit" id="sum-verify">Valider</button>
+                <button class="btn btn-outline" type="button" id="sum-back">Changer d'adresse</button>
+              </form>`}
+            <p class="sum-error" id="sum-auth-error" role="alert">${escapeHtml(sumState.error)}</p>
+        </div>` + summaryPrivacyHtml();
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+    root.innerHTML = banner + rules + `
+        <div class="sum-bar">
+            <span class="sum-user"><i data-lucide="user-check"></i> ${escapeHtml(sumState.user.email)}${sumState.admin ? ' <em class="sum-admin">modérateur</em>' : ""}</span>
+            <div class="sum-bar-actions">
+                <button class="btn btn-primary" type="button" id="sum-add-btn"><i data-lucide="plus"></i> Ajouter un résumé</button>
+                <button class="btn btn-outline" type="button" id="sum-logout">Se déconnecter</button>
+            </div>
+        </div>
+        <div id="sum-form-slot"></div>
+        <div class="sum-filters">
+            <div class="pool-search sum-search"><i data-lucide="search"></i><input type="search" id="sum-search" placeholder="Code, chapitre, titre…" value="${escapeHtml(sumState.search)}" autocomplete="off"></div>
+            <div class="sum-chips" id="sum-chips"></div>
+        </div>
+        <div id="sum-list" aria-live="polite"></div>` + summaryPrivacyHtml();
+    if (sumState.adding) renderSummaryForm();
+    renderSummaryChips();
+    renderSummaryList();
+    if (window.lucide) lucide.createIcons();
+}
+
+function renderSummaryChips() {
+    const el = document.getElementById("sum-chips"); if (!el) return;
+    const counts = {}; sumState.rows.forEach(r => { const g = sumGroupOf(r.course_code); counts[g] = (counts[g] || 0) + 1; });
+    const chips = [`<button type="button" class="sum-chip${sumState.cat === "all" ? " active" : ""}" data-cat="all">Tous <span>${sumState.rows.length}</span></button>`];
+    SUMMARY_GROUPS.forEach(g => { if (counts[g.cls]) chips.push(`<button type="button" class="sum-chip ${g.cls}${sumState.cat === g.cls ? " active" : ""}" data-cat="${g.cls}">${escapeHtml(g.label)} <span>${counts[g.cls]}</span></button>`); });
+    el.innerHTML = chips.join("");
+}
+
+function sumNorm(t) { return String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+function sumMatches(r) {
+    if (sumState.cat !== "all" && sumGroupOf(r.course_code) !== sumState.cat) return false;
+    const q = sumNorm(sumState.search).trim(); if (!q) return true;
+    const c = sumCourseOf(r.course_code);
+    const hay = sumNorm([r.course_code, c && c.name, c && c.nameFr, r.chapter, r.title, r.note].join(" "));
+    return q.split(/\s+/).every(w => hay.includes(w));
+}
+
+function renderSummaryList() {
+    const el = document.getElementById("sum-list"); if (!el) return;
+    if (sumState.loading) { el.innerHTML = `<div class="sum-empty">Chargement…</div>`; return; }
+    if (sumState.error) { el.innerHTML = `<div class="sum-empty sum-error">${escapeHtml(sumState.error)} <button class="btn btn-outline" id="sum-retry" type="button">Réessayer</button></div>`; return; }
+    const rows = sumState.rows.filter(sumMatches);
+    if (!rows.length) {
+        el.innerHTML = `<div class="sum-empty">${sumState.rows.length ? "Aucun résumé ne correspond à ces filtres." : "Aucun résumé pour l'instant. Soyez le premier à en ajouter un !"}</div>`;
+        return;
+    }
+    const byGroup = {};
+    rows.forEach(r => { const g = sumGroupOf(r.course_code); ((byGroup[g] = byGroup[g] || {})[r.course_code] = byGroup[g][r.course_code] || []).push(r); });
+    el.innerHTML = SUMMARY_GROUPS.filter(g => byGroup[g.cls]).map(g => {
+        const codes = Object.keys(byGroup[g.cls]).sort();
+        const total = codes.reduce((n, c) => n + byGroup[g.cls][c].length, 0);
+        return `<section class="sum-group ${g.cls}">
+            <h3 class="sum-group-title"><span class="sum-dot"></span>${escapeHtml(g.label)} <small>${total} résumé${total > 1 ? "s" : ""}</small></h3>
+            ${codes.map(code => {
+                const c = sumCourseOf(code);
+                const items = byGroup[g.cls][code].slice().sort((a, b) => String(a.chapter).localeCompare(String(b.chapter), "fr", { numeric: true }) || String(b.created_at).localeCompare(String(a.created_at)));
+                return `<div class="sum-course">
+                    <div class="sum-course-head"><span class="sum-code">${escapeHtml(code)}</span><span class="sum-course-name">${escapeHtml(c ? c.name : "Cours hors catalogue")}</span></div>
+                    ${items.map(sumItemHtml).join("")}
+                </div>`;
+            }).join("")}
+        </section>`;
+    }).join("");
+    if (window.lucide) lucide.createIcons();
+}
+
+function sumItemHtml(r) {
+    const mine = sumState.user && r.author_id === sumState.user.id;
+    const canDelete = mine || sumState.admin;
+    const id = escapeHtml(r.id);
+    const ext = (String(r.file_name).match(/\.([A-Za-z0-9]+)$/) || [, "fichier"])[1].toUpperCase();
+    const report = sumState.reportFor === r.id ? `<form class="sum-report" data-id="${id}"><select>${SUMMARY_REPORT_REASONS.map(x => `<option>${escapeHtml(x)}</option>`).join("")}</select><button class="btn btn-primary" type="submit">Envoyer</button><button class="btn btn-outline" type="button" data-act="report-cancel">Annuler</button></form>` : "";
+    const del = sumState.deleteFor === r.id
+        ? `<span class="sum-confirm">Supprimer ce résumé ? <button class="btn sum-danger" type="button" data-act="delete-yes" data-id="${id}">Oui, supprimer</button><button class="btn btn-outline" type="button" data-act="delete-no">Non</button></span>`
+        : (canDelete ? `<button class="sum-link sum-link-danger" type="button" data-act="delete" data-id="${id}"><i data-lucide="trash-2"></i> Supprimer</button>` : "");
+    return `<article class="sum-item" data-id="${id}">
+        <div class="sum-item-main">
+            <span class="sum-chapter">${escapeHtml(r.chapter)}</span>
+            <div class="sum-item-text">
+                <h4>${escapeHtml(r.title)}</h4>
+                ${r.note ? `<p>${escapeHtml(r.note)}</p>` : ""}
+                <small><i data-lucide="file-text"></i> ${escapeHtml(ext)} · ${escapeHtml(sumBytes(r.file_size || 0))} · ${escapeHtml(sumDate(r.created_at))} · ${escapeHtml(r.author_label || "Étudiant HEC")}</small>
+            </div>
+        </div>
+        <div class="sum-item-actions">
+            <button class="btn btn-primary sum-open" type="button" data-act="open" data-id="${id}"><i data-lucide="download"></i> Ouvrir</button>
+            <button class="sum-link" type="button" data-act="report" data-id="${id}"><i data-lucide="flag"></i> Signaler</button>
+            ${del}
+        </div>${report}
+    </article>`;
+}
+
+function renderSummaryForm() {
+    const slot = document.getElementById("sum-form-slot"); if (!slot) return;
+    if (!sumState.adding) { slot.innerHTML = ""; return; }
+    const opts = SUMMARY_GROUPS.filter(g => g.cls !== "cat-autre").map(g => {
+        const list = courses.filter(c => (getCategoryClass(c) || "") === g.cls).sort((a, b) => a.code.localeCompare(b.code));
+        return list.length ? `<optgroup label="${escapeHtml(g.label)}">${list.map(c => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.code)} — ${escapeHtml(c.name)}</option>`).join("")}</optgroup>` : "";
+    }).join("");
+    slot.innerHTML = `<form class="sum-form glass-panel" id="sum-form" novalidate>
+        <h3><i data-lucide="file-plus"></i> Ajouter un résumé</h3>
+        <div class="sum-form-grid">
+            <label>Cours (code)<select id="sum-f-course" required><option value="">— Choisir un cours du catalogue —</option>${opts}</select></label>
+            <label>Chapitre / semaine<input id="sum-f-chapter" maxlength="80" placeholder="Ex. : Chapitre 3" required></label>
+            <label class="sum-span2">Nom du résumé<input id="sum-f-title" maxlength="120" placeholder="Ex. : Régression linéaire — formules clés" required></label>
+            <label class="sum-span2">Note (facultatif)<textarea id="sum-f-note" maxlength="500" rows="2" placeholder="Ex. : basé sur le cours de l'automne 2026, inclut des exemples"></textarea></label>
+            <label class="sum-span2">Fichier (${SUMMARY_EXT.join(", ")} · max ${sumBytes(SUMMARY_MAX_BYTES)})<input type="file" id="sum-f-file" accept="${SUMMARY_EXT.join(",")}" required></label>
+        </div>
+        <label class="sum-check"><input type="checkbox" id="sum-f-name"> Afficher mon nom comme auteur (sinon : « Étudiant HEC »)</label>
+        <label class="sum-check"><input type="checkbox" id="sum-f-rights"> Je déclare que ce document est ma propre synthèse, que j'ai le droit de le partager, et qu'il n'est ni un examen ni un corrigé. Il sera visible par toutes les personnes ${SUMMARY_DOMAIN}.</label>
+        <p class="sum-error" id="sum-form-error" role="alert"></p>
+        <div class="sum-form-actions"><button class="btn btn-primary" type="submit" id="sum-f-submit">Publier</button><button class="btn btn-outline" type="button" id="sum-f-cancel">Annuler</button></div>
+    </form>`;
+    if (window.lucide) lucide.createIcons();
+}
+
+// ── Actions ──
+function sumSetError(id, msg) { const e = document.getElementById(id); if (e) e.textContent = msg || ""; }
+
+async function sumSubmitForm(ev) {
+    ev.preventDefault();
+    if (sumState.busy) return;
+    const code = document.getElementById("sum-f-course").value;
+    const chapter = document.getElementById("sum-f-chapter").value.trim();
+    const title = document.getElementById("sum-f-title").value.trim();
+    const note = document.getElementById("sum-f-note").value.trim();
+    const file = document.getElementById("sum-f-file").files[0];
+    if (!code || !sumCourseOf(code)) return sumSetError("sum-form-error", "Choisissez un cours du catalogue.");
+    if (!chapter) return sumSetError("sum-form-error", "Indiquez le chapitre ou la semaine.");
+    if (!title) return sumSetError("sum-form-error", "Donnez un nom au résumé.");
+    if (!file) return sumSetError("sum-form-error", "Choisissez un fichier.");
+    const ext = (file.name.match(/\.[A-Za-z0-9]+$/) || [""])[0].toLowerCase();
+    if (!SUMMARY_EXT.includes(ext)) return sumSetError("sum-form-error", "Format non accepté (" + SUMMARY_EXT.join(", ") + ").");
+    if (file.size > SUMMARY_MAX_BYTES) return sumSetError("sum-form-error", "Fichier trop lourd (max " + sumBytes(SUMMARY_MAX_BYTES) + ").");
+    if (file.size === 0) return sumSetError("sum-form-error", "Le fichier est vide.");
+    if (!document.getElementById("sum-f-rights").checked) return sumSetError("sum-form-error", "Cochez la case : vous devez avoir le droit de partager ce document.");
+    sumSetError("sum-form-error", "");
+    const btn = document.getElementById("sum-f-submit"); sumState.busy = true; btn.disabled = true; btn.textContent = "Envoi en cours…";
+    try {
+        const label = document.getElementById("sum-f-name").checked ? sumAuthorLabel(sumState.user.email) : "Étudiant HEC";
+        const row = await sumState.backend.add({ course_code: code, chapter, title, note: note || null, author_label: label }, file);
+        sumState.rows.unshift(row); sumState.adding = false;
+        showNotification("Résumé publié : visible par toutes les personnes @hec.ca.");
+        renderSummaries();
+    } catch (e) {
+        sumSetError("sum-form-error", e.message || "Publication impossible.");
+        btn.disabled = false; btn.textContent = "Publier";
+    }
+    sumState.busy = false;
+}
+
+async function sumHandleClick(ev) {
+    const t = ev.target.closest("button, [data-act]"); if (!t) return;
+    const act = t.dataset.act, id = t.dataset.id;
+    const row = id ? sumState.rows.find(r => r.id === id) : null;
+    if (t.id === "sum-add-btn") { sumState.adding = !sumState.adding; renderSummaryForm(); const c = document.getElementById("sum-f-course"); if (c) c.focus(); return; }
+    if (t.id === "sum-f-cancel") { sumState.adding = false; renderSummaryForm(); return; }
+    if (t.id === "sum-logout") { await sumState.backend.signOut(); sumState.user = null; sumState.step = "email"; sumState.rows = []; sumState.loaded = false; sumState.admin = false; sumState.adding = false; renderSummaries(); return; }
+    if (t.id === "sum-back") { sumState.step = "email"; sumState.error = ""; renderSummaries(); return; }
+    if (t.id === "sum-retry") { sumState.error = ""; sumLoad(true); return; }
+    if (t.classList.contains("sum-chip")) { sumState.cat = t.dataset.cat; renderSummaryChips(); renderSummaryList(); return; }
+    if (act === "open" && row) {
+        try { const url = await sumState.backend.fileUrl(row); window.open(url, "_blank", "noopener,noreferrer"); }
+        catch (e) { showNotification(e.message || "Ouverture impossible.", "error"); }
+    } else if (act === "report" && row) { sumState.reportFor = sumState.reportFor === id ? null : id; renderSummaryList(); }
+    else if (act === "report-cancel") { sumState.reportFor = null; renderSummaryList(); }
+    else if (act === "delete" && row) { sumState.deleteFor = id; renderSummaryList(); }
+    else if (act === "delete-no") { sumState.deleteFor = null; renderSummaryList(); }
+    else if (act === "delete-yes" && row) {
+        try { await sumState.backend.remove(row); sumState.rows = sumState.rows.filter(r => r.id !== id); sumState.deleteFor = null; showNotification("Résumé supprimé."); renderSummaries(); }
+        catch (e) { showNotification(e.message || "Suppression impossible.", "error"); }
+    }
+}
+
+async function sumHandleSubmit(ev) {
+    const f = ev.target;
+    if (f.id === "sum-form") return sumSubmitForm(ev);
+    ev.preventDefault();
+    if (f.id === "sum-email-form") {
+        const email = document.getElementById("sum-email").value.trim();
+        sumState.email = email;
+        if (!isHecEmail(email)) return sumSetError("sum-auth-error", "Utilisez votre adresse " + SUMMARY_DOMAIN + " (ex. prenom.nom@hec.ca).");
+        sumState.consent = !!document.getElementById("sum-consent").checked;
+        if (!sumState.consent) return sumSetError("sum-auth-error", "Cochez la case pour accepter la confidentialité et les conditions d'utilisation.");
+        const b = document.getElementById("sum-send"); b.disabled = true; b.textContent = "Envoi…";
+        try { await sumState.backend.sendCode(email); sumState.step = "code"; sumState.error = ""; renderSummaries(); const c = document.getElementById("sum-code"); if (c) c.focus(); }
+        catch (e) { b.disabled = false; b.textContent = "Recevoir un code"; sumSetError("sum-auth-error", e.message || "Envoi impossible."); }
+    } else if (f.id === "sum-code-form") {
+        const code = document.getElementById("sum-code").value.trim();
+        if (!/^\d{4,10}$/.test(code)) return sumSetError("sum-auth-error", "Entrez le code reçu par courriel (chiffres seulement).");
+        const b = document.getElementById("sum-verify"); b.disabled = true; b.textContent = "Vérification…";
+        try {
+            sumState.user = await sumState.backend.verifyCode(sumState.email, code);
+            if (!sumState.user || !isHecEmail(sumState.user.email)) { await sumState.backend.signOut(); sumState.user = null; throw new Error("Seules les adresses " + SUMMARY_DOMAIN + " sont acceptées."); }
+            sumState.error = ""; sumState.step = "email"; renderSummaries(); sumLoad(true);
+        } catch (e) { b.disabled = false; b.textContent = "Valider"; sumSetError("sum-auth-error", e.message || "Code invalide."); }
+    } else if (f.classList.contains("sum-report")) {
+        const row = sumState.rows.find(r => r.id === f.dataset.id); if (!row) return;
+        try { await sumState.backend.report(row, f.querySelector("select").value); sumState.reportFor = null; showNotification("Merci : le signalement a été transmis."); renderSummaryList(); }
+        catch (e) { showNotification(e.message || "Signalement impossible.", "error"); }
+    }
+}
+
+function setupSummariesEvents() {
+    const sec = document.getElementById("section-summaries"); if (!sec) return;
+    sec.addEventListener("click", ev => {
+        const a = ev.target.closest("#sum-open-privacy");
+        if (a) { ev.preventDefault(); const d = document.getElementById("sum-privacy"); if (d) { d.open = true; d.scrollIntoView({ behavior: "smooth", block: "start" }); } }
+    });
+    sec.addEventListener("change", ev => { if (ev.target.id === "sum-consent") sumState.consent = ev.target.checked; });
+    sec.addEventListener("click", sumHandleClick);
+    sec.addEventListener("submit", sumHandleSubmit);
+    sec.addEventListener("input", ev => { if (ev.target.id === "sum-search") { sumState.search = ev.target.value; renderSummaryList(); } });
+    new MutationObserver(() => { if (sec.classList.contains("active")) { sumLoad(); if (sumState.user && !document.getElementById("sum-list")) renderSummaries(); } }).observe(sec, { attributes: true, attributeFilter: ["class"] });
+}
+document.addEventListener("DOMContentLoaded", () => { setupSummariesEvents(); initSummaries(); });
 

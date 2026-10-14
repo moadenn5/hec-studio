@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HEC Montréal - Tableau de Bord M.Sc.</title>
+    <title>HEC-M Planificateur · M. Sc. Intelligence d'affaires</title>
+    <meta name="author" content="EN-NADIF Moad">
     <link rel="shortcut icon" href="icon.ico" type="image/x-icon">
     <link rel="icon" href="icon.ico" type="image/x-icon">
     <link rel="stylesheet" href="styles.css">
@@ -17,7 +18,7 @@
             <div class="sidebar-header">
                 <div class="logo">
                     <i data-lucide="graduation-cap"></i>
-                    <h2>HEC Studio</h2>
+                    <h2>HEC-M Planificateur</h2>
                 </div>
                 <div class="sidebar-controls">
                     <button id="sidebar-pin-btn" class="icon-btn" type="button" title="Épingler la barre latérale">
@@ -34,6 +35,7 @@
                 <a href="#" class="nav-item" data-target="section-tree"><i data-lucide="network"></i><span class="nav-text">Arbre d'Études</span></a>
                 <a href="#" class="nav-item" data-target="section-planner"><i data-lucide="calendar-range"></i><span class="nav-text">Planificateur</span></a>
                 <a href="#" class="nav-item" data-target="section-project"><i data-lucide="folder-kanban"></i><span class="nav-text">Projet Supervisé</span></a>
+                <a href="#" class="nav-item" data-target="section-summaries" style="display:none"><i data-lucide="library"></i><span class="nav-text">Résumés</span></a>
                 <a href="#" class="nav-item" data-target="section-settings"><i data-lucide="settings"></i><span class="nav-text">Paramètres</span></a>
             </nav>
             <div class="sidebar-footer">
@@ -46,11 +48,13 @@
                         <span class="user-role">M.Sc. Intelligence d'affaires</span>
                     </div>
                 </div>
+                <p class="sidebar-credit">Développé par <strong>EN-NADIF Moad</strong></p>
             </div>
         </aside>
 
         <!-- Main Content Wrapper -->
         <div class="content-wrapper">
+            <div class="mobile-topbar"><i data-lucide="graduation-cap"></i><span>HEC-M Planificateur</span></div>
             <!-- SECTION 1: DASHBOARD -->
             <section id="section-dashboard" class="app-section active">
                 <header class="top-header">
@@ -537,6 +541,17 @@
                 </div>
             </section>
 
+            <!-- SECTION : RÉSUMÉS PARTAGÉS -->
+            <section id="section-summaries" class="app-section">
+                <header class="top-header">
+                    <div>
+                        <div class="title-row"><h1>Résumés partagés</h1><button type="button" class="intro-info-btn" onclick="showIntro('section-summaries', true)" aria-label="Afficher l'aide de cette section" title="Aide sur cette section"><i data-lucide="info"></i></button></div>
+                        <p class="subtitle">Les synthèses des étudiant·e·s HEC, classées par cours</p>
+                    </div>
+                </header>
+                <div id="summaries-root"></div>
+            </section>
+
             <!-- SECTION 6: SETTINGS -->
             <section id="section-settings" class="app-section">
                 <header class="top-header">
@@ -578,7 +593,7 @@
 
                     <div class="settings-group mt-4">
                         <h3>À propos et confidentialité</h3>
-                        <p class="text-secondary mb-3"><strong>Version <span id="app-version"></span></strong> — outil d'étude <strong>non officiel</strong>, non affilié à HEC Montréal. Il applique la structure 2026-2027 du <strong>M. Sc. Intelligence d'affaires, cheminement Projet supervisé</strong> (pas le cheminement avec mémoire). Les cours, crédits, préalables et périodes d'offre viennent des pages publiques de HEC.</p>
+                        <p class="text-secondary mb-3"><strong>HEC-M Planificateur</strong> · Version <span id="app-version"></span> — outil développé par <strong>EN-NADIF Moad</strong>. Outil d'étude <strong>non officiel</strong>, non affilié à HEC Montréal. Il applique la structure 2026-2027 du <strong>M. Sc. Intelligence d'affaires, cheminement Projet supervisé</strong> (pas le cheminement avec mémoire). Les cours, crédits, préalables et périodes d'offre viennent des pages publiques de HEC.</p>
                         <p class="text-secondary mb-3"><strong>Vos données restent dans ce navigateur</strong> (stockage local) : rien n'est envoyé sur Internet, et personne d'autre ne les voit. Elles sont propres à cet appareil et à ce navigateur, et disparaissent si vous videz les données du site : utilisez régulièrement <em>Exporter mes données</em> ci-dessous pour en garder une copie.</p>
                     </div>
 
@@ -738,6 +753,7 @@
         </div>
     </div>
 
+    <script src="config.js"></script>
     <script src="app.js"></script>
     <script>
         lucide.createIcons();
