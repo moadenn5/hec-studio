@@ -21,8 +21,6 @@ Ouvrir `index.html` dans un navigateur (connexion Internet requise pour les icô
 
 ## Sources et limites
 - Structure : [page officielle du programme](https://www.hec.ca/programmes/maitrises/maitrise-intelligence-affaires/structure/) et fiches de cours de hec.ca. HEC précise que ces informations peuvent changer.
-- Offre non confirmée par HEC (« au moins une fois par an / aux deux ans ») : MATH 60656, TECH 60702, TECH 60712, TECH 60720 — l'outil les signale sans les bloquer.
-- Règle du **projet supervisé** : le document officiel ne précise pas la période d'offre ni de seuil de crédits ; l'outil applique « toute session, après 12 crédits de cours terminés » (information fournie par l'étudiant à l'origine de l'outil) — **à confirmer auprès de HEC**. La soumission du sujet avant 36 crédits de cours cumulés est celle du document officiel.
 - Convention de trimestres (Hiver = janvier–avril, Été = mai–août, Automne = septembre–décembre), coût par crédit et échelle de notes : paramètres de l'application, pas des données officielles.
 - Trimestres planifiables : Automne 2026 à Été 2028.
 
