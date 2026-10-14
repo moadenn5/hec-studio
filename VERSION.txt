@@ -1,1 +1,1 @@
-1.1 — 14 octobre 2026 (version figée : ne plus modifier ce dossier ; le travail continue en v2). Ajoute : aide d'introduction par section (pop-up + icône ⓘ) et conseils de choix de cours de Léo Belzile dans le planificateur.
+1.2 — 14 octobre 2026 (version figée : ne plus modifier ce dossier ; le travail continue en v2). Ajoute : liste de cours du planificateur compacte avec filtres toujours visibles, chronologie du projet en diagramme de Gantt, conseils de Léo Belzile repliés par défaut.

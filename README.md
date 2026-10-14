@@ -2,16 +2,16 @@
 
 Outil d'étude **non officiel** (non affilié à HEC Montréal) pour suivre son cheminement dans le **M. Sc. Intelligence d'affaires, cheminement Projet supervisé, structure 2026-2027** (45 crédits). Ce n'est **pas** le cheminement avec mémoire.
 
-**Version 1.1 — 14 octobre 2026**
+**Version 1.2 — 14 octobre 2026**
 
 ## Ce que fait l'outil
 - Catalogue des 26 cours de la structure (obligatoires, options Marketing / Sciences de la décision / TI, activités, ateliers) avec crédits, périodes d'offre, préalables et exclusions.
 - Calcul des crédits : réussis, en cours (trimestre courant), planifiés (trimestres futurs), restants ; plafonds par catégorie.
-- Planificateur par trimestre (Automne 2026 → Été 2028) avec filtres par profil, détection des préalables, des cours non offerts et des conflits ; glisser-déposer.
+- Planificateur par trimestre (Automne 2026 → Été 2028) : liste de cours compacte avec filtres (catégorie, profil, recherche) toujours visibles, détection des préalables, des cours non offerts et des conflits ; glisser-déposer.
 - Arbre d'études avec liens de préalables (« l'un OU l'autre » en pointillés).
-- Validation du plan (sans garantie de diplomation) et suivi du projet supervisé.
-- **Nouveau en 1.1** : à la première visite de chaque section, une courte fenêtre d'aide explique à quoi elle sert et comment la manipuler ; l'icône ⓘ à côté du titre la rouvre à tout moment.
-- **Nouveau en 1.1** : carte « Conseils pour choisir vos cours » dans le planificateur, résumant les recommandations du professeur Léo Belzile ([source](https://lbelzile.bitbucket.io/ia.html#cours-obligatoires)) — avis d'un professeur, pas des règles officielles de HEC.
+- Validation du plan (sans garantie de diplomation) et suivi du projet supervisé avec chronologie en diagramme de Gantt (dates, aujourd'hui, jalons).
+- **Depuis 1.1** : à la première visite de chaque section, une courte fenêtre d'aide explique à quoi elle sert et comment la manipuler ; l'icône ⓘ à côté du titre la rouvre à tout moment.
+- **Depuis 1.1** : carte « Conseils pour choisir vos cours » dans le planificateur, résumant les recommandations du professeur Léo Belzile ([source](https://lbelzile.bitbucket.io/ia.html#cours-obligatoires)) — avis d'un professeur, pas des règles officielles de HEC.
 
 ## Utiliser en ligne
 Ouvrir le lien de la page (GitHub Pages). **Vos données restent dans votre navigateur** (stockage local) : elles ne sont envoyées nulle part, personne d'autre ne les voit, et chaque personne qui ouvre le lien démarre avec un plan vierge.

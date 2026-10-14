@@ -433,7 +433,7 @@
                     <aside class="planner-pool glass-panel">
                         <div class="pool-header">
                             <h3><i data-lucide="folder-plus" class="icon-accent"></i> Cours à planifier</h3>
-                            <p class="pool-subtitle">Filtrez et glissez vos cours restants vers un trimestre, ou utilisez le bouton d'assignation rapide.</p>
+                            <p class="pool-subtitle">Glissez une carte vers un trimestre, ou cliquez « Planifier ».</p>
                         </div>
                         <div class="pool-filters">
                             <button class="pool-filter-btn active" id="pool-filter-all" onclick="setPoolFilter('all')">Tous</button>
@@ -444,9 +444,11 @@
                         <div class="pool-search-row">
                             <div class="pool-search"><i data-lucide="search"></i><input type="search" id="pool-search" placeholder="Code ou titre…" oninput="setPoolSearch(this.value)" autocomplete="off"></div>
                             <button class="pool-toggle active" id="pool-done-toggle" onclick="togglePoolShowDone()" aria-pressed="true" title="Afficher ou masquer les cours déjà réussis sans trimestre">Réussis</button>
+                        </div>
+                        <div class="pool-meta-row">
+                            <div class="pool-count" id="pool-count" aria-live="polite"></div>
                             <button class="pool-reset" id="pool-reset" onclick="resetPoolFilters()" style="display:none;"><i data-lucide="x"></i> Réinitialiser</button>
                         </div>
-                        <div class="pool-count" id="pool-count" aria-live="polite"></div>
                         <div class="pool-list" id="unplanned-courses-pool" ondragover="allowDrop(event)" ondrop="dropToPool(event)">
                             <!-- Dynamic unplanned courses will be injected here -->
                         </div>
@@ -487,7 +489,7 @@
                     </div>
 
                     <!-- Gantt Timeline widget -->
-                    <div class="bento-card glass-panel col-span-2 row-span-2">
+                    <div class="bento-card glass-panel col-span-4 gantt-card">
                         <div class="card-header">
                             <h3>Chronologie du Projet</h3>
                         </div>

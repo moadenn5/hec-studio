@@ -23,7 +23,7 @@ const COST_PER_CREDIT = 840;
 
 const SCHEMA_VERSION = 2;
 // Version de l'application (affichée dans Paramètres → À propos)
-const APP_VERSION = "1.1";
+const APP_VERSION = "1.2";
 const APP_VERSION_DATE = "14 octobre 2026";
 
 // Isolation du stockage local. Sur un site hébergé (ex. GitHub Pages : utilisateur.github.io/depot/), TOUS les dépôts
@@ -1897,9 +1897,9 @@ let currentPoolSearch = "";
 let poolShowDone = true;
 
 const POOL_PROFILES = [
-    { key: "Marketing", label: "Marketing", cls: "pp-marketing" },
-    { key: "Sciences de la décision", label: "Sciences de la décision", cls: "pp-decision" },
-    { key: "Technologies de l'information", label: "Technologies de l'information", cls: "pp-ti" }
+    { key: "Marketing", label: "Marketing", short: "Marketing", cls: "pp-marketing" },
+    { key: "Sciences de la décision", label: "Sciences de la décision", short: "Décision", cls: "pp-decision" },
+    { key: "Technologies de l'information", label: "Technologies de l'information", short: "TI", cls: "pp-ti" }
 ];
 
 function normText(t) { return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
@@ -1948,10 +1948,10 @@ function renderPoolFilterBar(basePool) {
     if (bar) {
         // Compteurs : cours à placer correspondant aux autres filtres (catégorie, recherche, réussis)
         const base = basePool.filter(c => poolMatchesCategory(c) && poolMatchesSearch(c) && (poolShowDone || c.status !== "done"));
-        const chips = [`<button class="pool-chip pp-all${currentPoolProfile === "all" ? " active" : ""}" onclick="setPoolProfile('${"all"}')">Tous les profils <span class="pool-chip-n">${base.length}</span></button>`];
+        const chips = [`<button class="pool-chip pp-all${currentPoolProfile === "all" ? " active" : ""}" title="Tous les profils" onclick="setPoolProfile('${"all"}')">Tous <span class="pool-chip-n">${base.length}</span></button>`];
         POOL_PROFILES.forEach(p => {
             const n = base.filter(c => c.profile === p.key).length;
-            chips.push(`<button class="pool-chip ${p.cls}${currentPoolProfile === p.key ? " active" : ""}${n === 0 ? " empty" : ""}" onclick="setPoolProfile(this.dataset.p)" data-p="${escapeHtml(p.key)}" title="Options du profil ${escapeHtml(p.label)}">${escapeHtml(p.label)} <span class="pool-chip-n">${n}</span></button>`);
+            chips.push(`<button class="pool-chip ${p.cls}${currentPoolProfile === p.key ? " active" : ""}${n === 0 ? " empty" : ""}" onclick="setPoolProfile(this.dataset.p)" data-p="${escapeHtml(p.key)}" aria-label="Profil ${escapeHtml(p.label)} : ${n} cours" title="Options du profil ${escapeHtml(p.label)}">${escapeHtml(p.short)} <span class="pool-chip-n">${n}</span></button>`);
         });
         bar.innerHTML = chips.join("");
         // « Tous les profils » : désactive le filtre
@@ -2000,26 +2000,21 @@ function renderSessionPlanner() {
                 const catLabel = getCategoryLabel(c);
                 card.className = `pool-card ${getCategoryClass(c)}`;
 
+                const doneTag = c.status === "done" ? `<span class="planner-state-tag done">Réussi${c.semester ? " · " + escapeHtml(c.semester) : ""}</span>` : "";
                 card.innerHTML = `
-                    <div class="pool-card-header" style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="pc-top">
                         <span class="p-code-highlighted">${escapeHtml(c.code)}</span>
-                        <div style="display: flex; align-items: center; gap: 4px; opacity: 0.35;">
-                            <i data-lucide="grip-vertical" style="width: 12px; height: 12px;" title="Glisser pour planifier"></i>
-                        </div>
-                    </div>
-                    <span class="p-title" style="margin-bottom: 4px; display: block;">${escapeHtml(c.name)}</span>
-                    <div style="font-size:0.65rem; color:var(--text-secondary); margin: 3px 0; display:flex; align-items:center; gap:4px;">
-                        <i data-lucide="calendar" style="width:10px; height:10px;"></i> ${escapeHtml(c.period || NOT_IN_DOC)}
-                    </div>
-                    <div style="margin-top: 4px; margin-bottom: 6px; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
-                        <span class="card-category-sublabel" style="display:inline-block; font-size:0.62rem; margin:0;">${escapeHtml(catLabel)}</span>
-                        ${eligibilityChip(c)}${c.status === "done" ? '<span class="planner-state-tag done">Réussi${c.semester ? " · " + escapeHtml(c.semester) : " — sans trimestre"}</span>' : ""}
-                    </div>
-                    <div class="pool-card-actions" style="margin-top: auto; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.03);">
-                        <span class="p-credits">${c.credits.toFixed(1)} cr</span>
-                        <button class="btn-quick-assign" onclick="event.stopPropagation(); toggleQuickAssignMenu(event, '${c.code}')">
+                        <span class="pc-credits">${c.credits.toFixed(1)} cr</span>
+                        <i data-lucide="grip-vertical" class="pc-grip" title="Glisser pour planifier"></i>
+                        <button class="btn-quick-assign" onclick="event.stopPropagation(); toggleQuickAssignMenu(event, '${c.code}')" title="Choisir un trimestre">
                             <i data-lucide="plus" style="width:12px;height:12px;"></i> Planifier
                         </button>
+                    </div>
+                    <span class="p-title">${escapeHtml(c.name)}</span>
+                    <div class="pc-meta">
+                        <span class="pc-period" title="Période d'offre"><i data-lucide="calendar" style="width:10px;height:10px;"></i> ${escapeHtml(c.period || NOT_IN_DOC)}</span>
+                        <span class="card-category-sublabel">${escapeHtml(catLabel)}</span>
+                        ${eligibilityChip(c)}${doneTag}
                     </div>
                 `;
                 poolContainer.appendChild(card);
@@ -2616,6 +2611,7 @@ function initMilestonesChecklist() {
 function toggleProjectMilestone(m) {
     const checked = document.getElementById(`chk-${m}`).checked;
     storageSet(`hec_milestone_${m}`, checked ? "true" : "false");
+    if (typeof renderProjectGantt === "function") renderProjectGantt();
     renderValidation(); // la règle « sujet avant 36 cr » en dépend
     if (window.lucide) lucide.createIcons();
 }
@@ -3419,7 +3415,7 @@ function getPlanningAdvice() {
 }
 
 function toggleAdvice() {
-    const open = storageGet(ADVICE_STORAGE_KEY) !== "false";
+    const open = storageGet(ADVICE_STORAGE_KEY) === "true";
     storageSet(ADVICE_STORAGE_KEY, open ? "false" : "true");
     renderPlannerAdvice();
 }
@@ -3427,12 +3423,12 @@ function toggleAdvice() {
 function renderPlannerAdvice() {
     const box = document.getElementById("planner-advice");
     if (!box) return;
-    const open = storageGet(ADVICE_STORAGE_KEY) !== "false";
+    const open = storageGet(ADVICE_STORAGE_KEY) === "true";   // replié par défaut : laisse la place à la liste de cours
     const tips = getPlanningAdvice();
     const icon = { warn: "alert-triangle", tip: "lightbulb", ok: "check-circle" };
     box.innerHTML = `
         <button type="button" class="advice-toggle" onclick="toggleAdvice()" aria-expanded="${open}" aria-controls="advice-body">
-            <span class="advice-title"><i data-lucide="lightbulb"></i> Conseils pour choisir vos cours</span>
+            <span class="advice-title"><i data-lucide="lightbulb"></i> Conseils pour choisir vos cours <small class="advice-hint">${open ? "" : "— du professeur Léo Belzile · cliquer pour afficher"}</small></span>
             <i data-lucide="${open ? "chevron-up" : "chevron-down"}"></i>
         </button>
         <div id="advice-body" class="advice-body"${open ? "" : " hidden"}>
@@ -3450,5 +3446,108 @@ function renderPlannerAdvice() {
             </div>
         </div>`;
     if (window.lucide) lucide.createIcons();
+}
+
+
+// ─── Chronologie du projet supervisé (diagramme de Gantt) ───
+// Remplace la version d'origine : barres positionnées dans le temps, axe des mois, marqueur « aujourd'hui »,
+// statut selon le calendrier. Le découpage en phases est indicatif (proposé par l'outil, non officiel).
+const GANTT_PHASES = [
+    { name: "Revue de littérature & sujet", months: 2, milestone: "sujet", milestoneLabel: "Sujet approuvé" },
+    { name: "Méthodologie & données",       months: 1 },
+    { name: "Analyses & modélisation",      months: 1 },
+    { name: "Rédaction du rapport",         months: 1, milestone: "redac", milestoneLabel: "Rapport rédigé" },
+    { name: "Dépôt & correction",           months: 1, milestone: "sout",  milestoneLabel: "Dépôt effectué" }
+];
+
+function ganttAddMonths(d, n) {            // ajoute n mois sans déborder (31 janv. + 1 mois = 28 févr.)
+    const r = new Date(d.getFullYear(), d.getMonth() + n, 1);
+    r.setDate(Math.min(d.getDate(), new Date(r.getFullYear(), r.getMonth() + 1, 0).getDate()));
+    return r;
+}
+function ganttDays(a, b) { return Math.round((b - a) / 86400000); }
+function ganttFmt(d, withYear) { return d.toLocaleDateString("fr-CA", withYear ? { day: "numeric", month: "short", year: "numeric" } : { day: "numeric", month: "short" }); }
+
+function renderProjectGantt() {
+    const gantt = document.getElementById("project-gantt-timeline");
+    if (!gantt) return;
+    const input = document.getElementById("project-start-date");
+    const startStr = input ? input.value : "";
+    if (!startStr) {
+        gantt.innerHTML = `<div class="gt-empty"><i data-lucide="calendar-plus"></i><p>Renseignez la date de début ci-dessus pour afficher votre chronologie.</p></div>`;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+    const start = new Date(startStr + "T00:00:00");
+    if (isNaN(start)) { gantt.innerHTML = ""; return; }
+    const today = getToday(); today.setHours(0, 0, 0, 0);
+
+    // Bornes de chaque phase = début + cumul de mois
+    const phases = GANTT_PHASES.map(p => ({ ...p, s: null, e: null }));
+    let acc = 0;
+    phases.forEach(p => { p.s = ganttAddMonths(start, acc); acc += p.months; p.e = ganttAddMonths(start, acc); });
+    const end = phases[phases.length - 1].e;
+    const total = ganttDays(start, end);
+    const pct = d => Math.max(0, Math.min(100, ganttDays(start, d) / total * 100));
+    const todayPct = pct(today);
+    const elapsed = ganttDays(start, today);
+    let state, stateTxt;
+    if (today < start) { state = "soon"; stateTxt = `Débute dans ${ganttDays(today, start)} j`; }
+    else if (today >= end) { state = "over"; stateTxt = "Période de 6 mois écoulée"; }
+    else { state = "now"; stateTxt = `Jour ${elapsed + 1} sur ${total} · ${Math.round(todayPct)} %`; }
+    const left = today >= start && today < end ? ganttDays(today, end) : null;
+
+    // Axe des mois
+    const months = [];
+    for (let i = 0; i < 6; i++) {
+        const a = ganttAddMonths(start, i), b = ganttAddMonths(start, i + 1);
+        const showYear = i === 0 || a.getMonth() === 0;
+        const mLabel = a.toLocaleDateString("fr-CA", { month: "short" }).replace(".", "") + (showYear ? " ’" + String(a.getFullYear()).slice(2) : "");
+        months.push(`<div class="gt-month" style="left:${pct(a)}%;width:${pct(b) - pct(a)}%"><span>${mLabel}</span></div>`);
+    }
+    const todayMark = (today >= start && today <= end) ? `<div class="gt-today" style="left:${todayPct}%"></div>` : "";
+    const grid = months.map((_, i) => `<span class="gt-gridline" style="left:${pct(ganttAddMonths(start, i))}%"></span>`).join("");
+
+    const rows = phases.map((p, i) => {
+        const lastDay = new Date(p.e); lastDay.setDate(lastDay.getDate() - 1);
+        let st = "soon", label = "À venir", fill = 0;
+        if (today >= p.e) { st = "past"; label = "Écoulée"; fill = 100; }
+        else if (today >= p.s) { st = "now"; label = "En cours"; fill = Math.round(ganttDays(p.s, today) / ganttDays(p.s, p.e) * 100); }
+        const done = p.milestone && storageGet(`hec_milestone_${p.milestone}`) === "true";
+        const ms = p.milestone ? `<span class="gt-ms${done ? " done" : ""}" title="Jalon de la section « Livrables »">${done ? "✓ " : ""}${p.milestoneLabel}</span>` : "";
+        const sub = `${ganttFmt(p.s)} → ${ganttFmt(lastDay, true)} · ${p.months} mois`;
+        return `
+        <div class="gt-row gt-${st}">
+            <div class="gt-label">
+                <span class="gt-num">${i + 1}</span>
+                <div class="gt-label-txt"><b>${escapeHtml(p.name)}</b><small>${sub}</small></div>
+                <span class="gt-state gt-state-${st}">${label}</span>
+            </div>
+            <div class="gt-track">
+                ${grid}${todayMark}
+                <div class="gt-bar" style="left:${pct(p.s)}%;width:${pct(p.e) - pct(p.s)}%"><div class="gt-bar-fill" style="width:${fill}%"></div></div>
+            </div>
+            ${ms ? `<div class="gt-ms-row">${ms}</div>` : ""}
+        </div>`;
+    }).join("");
+
+    gantt.innerHTML = `
+        <div class="gt-summary">
+            <div class="gt-stat"><span>Début</span><strong>${ganttFmt(start, true)}</strong></div>
+            <div class="gt-stat"><span>Échéance (6 mois)</span><strong>${ganttFmt(new Date(end.getTime() - 86400000), true)}</strong></div>
+            <div class="gt-stat gt-stat-${state}"><span>Aujourd'hui</span><strong>${stateTxt}</strong></div>
+            ${left !== null ? `<div class="gt-stat"><span>Jours restants</span><strong>${left} j</strong></div>` : ""}
+        </div>
+        <div class="gt-chart">
+            <div class="gt-axis-row"><div class="gt-axis-spacer"></div><div class="gt-axis">${months.join("")}${todayMark ? `<div class="gt-today-flag" style="left:${todayPct}%">Aujourd'hui</div>` : ""}</div></div>
+            ${rows}
+        </div>
+        <p class="gt-note"><i data-lucide="info"></i> Découpage indicatif proposé par l'outil (non officiel). Les statuts suivent le calendrier ; les jalons se cochent dans « Livrables & activités obligatoires ».</p>`;
+    if (window.lucide) lucide.createIcons();
+}
+
+function calculateProjectTimeline() {
+    renderProjectGantt();
+    if (document.getElementById("project-start-date") && document.getElementById("project-start-date").value) saveData();
 }
 
